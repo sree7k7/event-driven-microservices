@@ -36,7 +36,7 @@ class EventDrivenMicroservicesStack(Stack):
                             input=self.backend_repository,
                             commands=[
                                 "pip install uv",
-                                "uv sync --frozen",
+                                "uv sync",
                                 "npx aws-cdk synth",
                             ]
                             )        
@@ -57,7 +57,7 @@ class EventDrivenMicroservicesStack(Stack):
 
         stage = pipeline.add_stage(Stage(
             self,
-            "microservices-stage", #change this
+            "microservices-stage", #change
             config = microservices_config,
             # env=cdk.Environment(account=microservices_config['AWS_Account'], region="eu-central-1")
             )
