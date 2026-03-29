@@ -1,0 +1,3 @@
+{
+  "ssm:account=230150030147:parameterName=/db/password:region=us-east-1": "testpwd"
+}
