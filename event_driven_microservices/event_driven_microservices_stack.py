@@ -36,7 +36,7 @@ class EventDrivenMicroservicesStack(Stack):
                             input=self.backend_repository,
                             commands=[
                                 "npm install -g aws-cdk",
-                                "python -m pip install -r requirements.txt",
+                                # "python -m pip install -r requirements.txt",
                                 "cdk synth",
                             ]
                             )        
@@ -57,7 +57,7 @@ class EventDrivenMicroservicesStack(Stack):
 
         stage = pipeline.add_stage(Stage(
             self,
-            "dnac-test-env", #change
+            "microservices-stage", #change
             config = microservices_config,
             # env=cdk.Environment(account=microservices_config['AWS_Account'], region="eu-central-1")
             )
