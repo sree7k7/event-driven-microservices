@@ -23,7 +23,7 @@ class EventDrivenMicroservicesStack(Stack):
         self.backend_repository = CodePipelineSource.git_hub(
             "sree7k7/event-driven-microservices",
             "main",
-            authentication=SecretValue.ssm_secure("/github/token")
+            authentication=SecretValue.secrets_manager("/github/token")
         )
 
         pipeline = CodePipeline(
@@ -47,7 +47,7 @@ class EventDrivenMicroservicesStack(Stack):
             "network": {
             "vpc_cidr": "10.0.0.0/16",
             "cidr_mask": 24,
-            "availability_zone": "us-east-1a", "us-east-1b"
+            "availability_zones": ["us-east-1a", "us-east-1b"],
             "public_subnet_cidrs": ["10.0.1.0/24", "10.0.2.0/24"],
             "private_subnet_cidrs": ["10.0.3.0/24", "10.0.4.0/24"],
             "db_username": "admin",

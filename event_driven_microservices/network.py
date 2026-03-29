@@ -16,7 +16,7 @@ class Network(cdk.Stack):
             self,
             'BackupVPC',
             ip_addresses=ec2.IpAddresses.cidr(config['network']['vpc_cidr']),
-            availability_zones=[config['network']['availability_zone']],
+            availability_zones=config['network']['availability_zones'],
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     name="public",
