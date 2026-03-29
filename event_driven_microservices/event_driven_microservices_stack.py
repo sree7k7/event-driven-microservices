@@ -35,9 +35,9 @@ class EventDrivenMicroservicesStack(Stack):
             synth=ShellStep("Synth",
                             input=self.backend_repository,
                             commands=[
-                                "npm install -g aws-cdk",
-                                # "python -m pip install -r requirements.txt",
-                                "cdk synth",
+                                "pip install uv",
+                                "uv sync --frozen",
+                                "npx aws-cdk synth",
                             ]
                             )        
         )
