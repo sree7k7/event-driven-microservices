@@ -30,3 +30,8 @@ class Network(cdk.Stack):
                 )
                 ]
         )
+
+        # Override the AWS Console 'Name' tag for the private subnets
+        private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
+        for i, subnet in enumerate(private_subnets, start=1):
+            cdk.Tags.of(subnet).add("Name", f"/privateSubnet{i}")
