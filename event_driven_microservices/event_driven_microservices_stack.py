@@ -36,9 +36,7 @@ class EventDrivenMicroservicesStack(Stack):
                             input=self.backend_repository,
                             commands=[
                                 "pip install uv",
-                                "uv venv",
-                                "uv pip install -r requirements.txt",
-                                "source .venv/bin/activate",
+                                "uv sync --frozen",
                                 "npx aws-cdk synth",
                             ]
                             )        
