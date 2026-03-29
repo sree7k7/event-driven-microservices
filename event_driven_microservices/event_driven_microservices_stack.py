@@ -57,7 +57,7 @@ class EventDrivenMicroservicesStack(Stack):
 
         stage = pipeline.add_stage(Stage(
             self,
-            "microservices-stage", #change
+            "microservices-stage", #change this
             config = microservices_config,
             # env=cdk.Environment(account=microservices_config['AWS_Account'], region="eu-central-1")
             )
