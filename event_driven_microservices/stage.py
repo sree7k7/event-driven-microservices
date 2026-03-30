@@ -24,7 +24,8 @@ class Stage(cdk.Stage):
         network = Network(
             self,
             'Network',
-            config=config,
+            process_order_fn = None, # Placeholder, will be set after application stack is created
+            config = config,
         )
 
         app_stack = application_stack(
@@ -36,9 +37,3 @@ class Stage(cdk.Stage):
             dynamodb_table = Db.table,
             config = config,
         )
-
-        # Now that the application stack and its Lambda are created,
-        # add the API Gateway route that integrates with it.
-        # Note: This assumes your `application_stack` exposes the created Lambda
-        # function as an attribute, for example, `process_order_lambda`.
-        network.add_order_processing_route(app_stack.process_order_lambda)
