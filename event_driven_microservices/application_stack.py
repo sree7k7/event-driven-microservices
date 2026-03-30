@@ -43,6 +43,7 @@ class application_stack(cdk.Stack):
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
+            timeout=cdk.Duration.seconds(10),
             environment={
                 'TABLE_NAME': dynamodb_table.table_name,
                 'TOPIC_ARN': sns_topic.topic_arn
@@ -63,6 +64,7 @@ class application_stack(cdk.Stack):
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
+            timeout=cdk.Duration.seconds(10),
             events=[
                 lambdaFn_events.SqsEventSource(sqs_queue)
             ],
@@ -117,3 +119,4 @@ class application_stack(cdk.Stack):
             value=self.http_api.url,
             description="The URL of the HTTP API Gateway"
         )
+    
