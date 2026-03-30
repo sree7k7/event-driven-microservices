@@ -53,13 +53,13 @@ class application_stack(cdk.Stack):
             log_group=process_order_fn_logs, # Use the defined log group for structured logging
         )
 
-        ## lambda function GenerateReceiptWorker
-        ## The ProcessOrderWorker Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the GenerateReceiptWorker Lambda
+        ## lambda function ReceiptGenerator
+        ## The ProcessOrderWorker Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
         self.generate_receipt_fn = lambdaFn.Function(
             self,
-            "GenerateReceiptWorker",
+            "ReceiptGenerator",
             runtime=lambdaFn.Runtime.PYTHON_3_12,
-            handler="GenerateReceiptWorker.lambda_handler",
+            handler="ReceiptGenerator.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
