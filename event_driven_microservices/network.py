@@ -33,13 +33,13 @@ class Network(cdk.Stack):
         # to ensure that our Lambda functions can access these services without traversing the public internet, 
         # enhancing security and reducing latency.
         # This is especially important for the GenerateReceiptWorker Lambda, which needs to access the SQS Queue and DynamoDB Table, and the ProcessOrderWorker Lambda, which needs to access the SNS Topic and DynamoDB Table.
-        self.vpc.add_gateway_endpoint(
-            "SQSVPCEndpoint",
-            service=ec2.GatewayVpcEndpointAwsService.SQS
+        self.vpc.add_interface_endpoint(
+            "SqsEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.SQS
         )
-        self.vpc.add_gateway_endpoint(
+        self.vpc.add_interface_endpoint(
             "SNSEndpoint",
-            service=ec2.GatewayVpcEndpointAwsService.SNS
+            service=ec2.InterfaceVpcEndpointAwsService.SNS
         )
         self.vpc.add_gateway_endpoint(
             "DynamoDBVPCEndpoint",
