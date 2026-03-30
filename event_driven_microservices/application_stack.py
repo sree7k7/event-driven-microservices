@@ -14,21 +14,20 @@ class application_stack(cdk.Stack):
         super().__init__(scope, construct_id, **kwargs)
         
 
-        ## Log group for structured logging
-        generate_receipt_fn_logs = logs.LogGroup(
-            self,
-            "GenerateReceiptWorkerLogs",
-            log_group_name="/aws/lambda/GenerateReceiptWorker",
-            removal_policy=RemovalPolicy.DESTROY,
-            retention=logs.RetentionDays.ONE_WEEK,
-        )
-
-        ## logging configuration for structured logging for the GenerateReceiptWorker Lambda
         ## This configuration ensures that logs are structured in JSON format, making it easier to query and
         process_order_fn_logs = logs.LogGroup(
             self,
             "ProcessOrderWorkerLogs",
             log_group_name="/aws/lambda/ProcessOrderWorker",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
+
+        ## logging configuration for structured logging for the GenerateReceiptWorker Lambda
+        generate_receipt_fn_logs = logs.LogGroup(
+            self,
+            "GenerateReceiptWorkerLogs",
+            log_group_name="/aws/lambda/GenerateReceiptWorker",
             removal_policy=RemovalPolicy.DESTROY,
             retention=logs.RetentionDays.ONE_WEEK,
         )
@@ -39,7 +38,7 @@ class application_stack(cdk.Stack):
             self,
             "ProcessOrderWorker",
             runtime=lambdaFn.Runtime.PYTHON_3_12,
-            handler="ProcessOrderWorker.handler",
+            handler="ProcessOrderWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
@@ -60,7 +59,7 @@ class application_stack(cdk.Stack):
             self,
             "GenerateReceiptWorker",
             runtime=lambdaFn.Runtime.PYTHON_3_12,
-            handler="GenerateReceiptWorker.handler",
+            handler="GenerateReceiptWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
