@@ -29,6 +29,23 @@ class Network(cdk.Stack):
                 ]
         )
 
+        ## create vpc endpoints for SQS, SNS, and DynamoDB 
+        # to ensure that our Lambda functions can access these services without traversing the public internet, 
+        # enhancing security and reducing latency.
+        # This is especially important for the GenerateReceiptWorker Lambda, which needs to access the SQS Queue and DynamoDB Table, and the ProcessOrderWorker Lambda, which needs to access the SNS Topic and DynamoDB Table.
+        self.vpc.add_gateway_endpoint(
+            "SQSVPCEndpoint",
+            service=ec2.GatewayVpcEndpointAwsService.SQS
+        )
+        self.vpc.add_gateway_endpoint(
+            "SNSEndpoint",
+            service=ec2.GatewayVpcEndpointAwsService.SNS
+        )
+        self.vpc.add_gateway_endpoint(
+            "DynamoDBVPCEndpoint",
+            service=ec2.GatewayVpcEndpointAwsService.DYNAMODB
+        )        
+
         # Override the AWS Console 'Name' tag for the private subnets
         private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
         for i, subnet in enumerate(private_subnets, start=1):
