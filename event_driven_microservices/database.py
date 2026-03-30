@@ -24,4 +24,6 @@ class Database(cdk.Stack):
             billing=dynamodb.Billing.on_demand(),
             partition_key=dynamodb.Attribute(name="sessionId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY, # NOT recommended for production, use with caution
+            point_in_time_recovery=False,
+            deletion_protection=False, # NOT recommended for production, use with caution
         )
