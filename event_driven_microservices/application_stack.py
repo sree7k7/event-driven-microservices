@@ -6,7 +6,7 @@ from aws_cdk import aws_logs as logs
 import aws_cdk.aws_lambda as lambdaFn
 import aws_cdk.aws_lambda_event_sources as lambdaFn_events
 import aws_cdk.aws_apigatewayv2 as apigwv2
-import aws_cdk.aws_apigatewayv2_integrations as apigw_integrations
+import aws_cdk.aws_apigatewayv2_integrations as integrations
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
@@ -78,4 +78,42 @@ class application_stack(cdk.Stack):
         sqs_queue.grant_send_messages(self.generate_receipt_fn)
         sqs_queue.grant_consume_messages(self.generate_receipt_fn)
 
+        # ==========================================
+        # API GATEWAY (The VIP Host - HTTP API v2)
+        # ==========================================
 
+# 1. Create the HTTP API
+        self.http_api = apigwv2.HttpApi(
+            self,
+            "OrderHttpApi",
+            api_name="Order Processing HTTP API",
+            description="The modern, fast front door for the event-driven system.",
+            cors_preflight=apigwv2.CorsPreflightOptions(
+                allow_origins=["*"],
+                allow_methods=[
+                    apigwv2.CorsHttpMethod.POST, 
+                    apigwv2.CorsHttpMethod.OPTIONS
+                ]
+            )
+        )
+
+        # 2. Define the Integration (using the lambda created directly above)
+        process_order_integration = integrations.HttpLambdaIntegration(
+            "ProcessOrderIntegration",
+            handler=self.process_order_fn
+        )
+
+        # 3. Create the Route and attach the integration
+        self.http_api.add_routes(
+            path="/orders",
+            methods=[apigwv2.HttpMethod.POST],
+            integration=process_order_integration
+        )
+        
+        # 4. Output the URL
+        cdk.CfnOutput(
+            self, 
+            "HttpApiEndpointUrl", 
+            value=self.http_api.url,
+            description="The URL of the HTTP API Gateway"
+        )

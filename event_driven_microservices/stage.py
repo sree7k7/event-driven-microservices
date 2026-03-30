@@ -24,7 +24,6 @@ class Stage(cdk.Stage):
         network = Network(
             self,
             'Network',
-            process_order_fn = None, # Placeholder, will be set after application stack is created
             config = config,
         )
 
