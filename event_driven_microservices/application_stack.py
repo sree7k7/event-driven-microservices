@@ -1,22 +1,37 @@
-import random
-import this
-import constructs
 import aws_cdk as cdk
-from aws_cdk import Duration, RemovalPolicy, Stack
+from aws_cdk import RemovalPolicy, Stack
 import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
 from aws_cdk import aws_logs as logs
-from aws_cdk import aws_ssm as ssm
-import aws_cdk.aws_rds as rds
 import aws_cdk.aws_lambda as lambdaFn
 import aws_cdk.aws_lambda_event_sources as lambdaFn_events
-import aws_cdk.aws_sqs as sqs
+import aws_cdk.aws_apigatewayv2 as apigwv2
+import aws_cdk.aws_apigatewayv2_integrations as apigw_integrations
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
+
+        ## Log group for structured logging
+        generate_receipt_fn_logs = logs.LogGroup(
+            self,
+            "GenerateReceiptWorkerLogs",
+            log_group_name="/aws/lambda/GenerateReceiptWorker",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
+
+        ## logging configuration for structured logging for the GenerateReceiptWorker Lambda
+        ## This configuration ensures that logs are structured in JSON format, making it easier to query and
+        process_order_fn_logs = logs.LogGroup(
+            self,
+            "ProcessOrderWorkerLogs",
+            log_group_name="/aws/lambda/ProcessOrderWorker",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
 
         ## lambda funtion ProcessOrderWorker
         ##This function acts as the entry point. It handles the API Gateway request, writes to DynamoDB, and broadcasts the event to SNS.
@@ -31,7 +46,11 @@ class application_stack(cdk.Stack):
             environment={
                 'TABLE_NAME': dynamodb_table.table_name,
                 'TOPIC_ARN': sns_topic.topic_arn
-            }
+            },
+            logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
+            system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
+            application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
+            log_group=process_order_fn_logs, # Use the defined log group for structured logging
         )
 
         ## lambda function GenerateReceiptWorker
@@ -46,5 +65,17 @@ class application_stack(cdk.Stack):
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
             events=[
                 lambdaFn_events.SqsEventSource(sqs_queue)
-            ]
+            ],
+            logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
+            system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
+            application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
+            log_group=generate_receipt_fn_logs, # Use the defined log group for structured logging
         )
+
+        ## Grant the necessary permissions
+        dynamodb_table.grant_read_write_data(self.process_order_fn)
+        sns_topic.grant_publish(self.process_order_fn)
+        sqs_queue.grant_send_messages(self.generate_receipt_fn)
+        sqs_queue.grant_consume_messages(self.generate_receipt_fn)
+
+

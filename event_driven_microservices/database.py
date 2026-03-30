@@ -17,11 +17,11 @@ class Database(cdk.Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         ## For simplicity, we're using DynamoDB as our database. In a real-world application, you might use RDS or another database service.
-        self.table = dynamodb.Table(
+        self.table = dynamodb.TableV2(
             self,
             "OrdersTable",
             table_name="CoffeeOrders",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            billing=dynamodb.Billing.on_demand(),
             partition_key=dynamodb.Attribute(name="sessionId", type=dynamodb.AttributeType.STRING),
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=RemovalPolicy.DESTROY, # NOT recommended for production, use with caution
         )

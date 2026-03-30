@@ -1,21 +1,14 @@
-import random
-import this
-import constructs
 import aws_cdk as cdk
-from aws_cdk import Duration, RemovalPolicy, Stack
 import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
-from aws_cdk import aws_logs as logs
-from aws_cdk import aws_ssm as ssm
-import aws_cdk.aws_rds as rds
-import aws_cdk.aws_lambda as lambdaFn
-import aws_cdk.aws_lambda_event_sources as lambdaFn_events
-import aws_cdk.aws_sqs as sqs
+import aws_cdk.aws_apigatewayv2 as apigwv2
+import aws_cdk.aws_apigatewayv2_integrations as integrations
+
 
 
 class Network(cdk.Stack):
-    def __init__(self, scope: Construct, construct_id: str, config: object, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
+    def __init__(self, scope: Construct, construct_id: str, config: object, process_order_fn, **kwargs) -> None:
+        super().__init__(scope, construct_id)
         
         self.vpc = ec2.Vpc(
             self,
@@ -35,6 +28,47 @@ class Network(cdk.Stack):
                 )
                 ]
         )
+
+
+        # ==========================================
+        # API GATEWAY (The VIP Host - HTTP API v2)
+        # ==========================================
+        
+        # 1. Create the HTTP API
+        self.http_api = apigwv2.HttpApi(
+            self,
+            "OrderHttpApi",
+            api_name="Order Processing HTTP API",
+            description="The modern, fast front door for the event-driven system.",
+            cors_preflight=apigwv2.CorsPreflightOptions(
+                allow_origins=["*"],
+                allow_methods=[
+                    apigwv2.CorsHttpMethod.POST, 
+                    apigwv2.CorsHttpMethod.OPTIONS
+                ]
+            )
+        )
+
+        # # 2. Define the Integration
+        # process_order_integration = integrations.HttpLambdaIntegration(
+        #     "ProcessOrderIntegration",
+        #     handler=process_order_fn
+        # )
+
+        # # 3. Create the Route and attach the integration
+        # self.http_api.add_routes(
+        #     path="/orders",
+        #     methods=[apigwv2.HttpMethod.POST],
+        #     integration=process_order_integration
+        # )
+        
+        # # 4. Output the URL
+        # cdk.CfnOutput(
+        #     self, 
+        #     "HttpApiEndpointUrl", 
+        #     value=self.http_api.url,
+        #     description="The URL of the HTTP API Gateway"
+        # )
 
 
         # Override the AWS Console 'Name' tag for the private subnets
