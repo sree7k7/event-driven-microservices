@@ -20,27 +20,27 @@ class EventDrivenMicroservicesStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        self.backend_repository = CodePipelineSource.git_hub(
-            "sree7k7/event-driven-microservices",
-            "main",
-            authentication=SecretValue.secrets_manager("/github/token")
-        )
+        # self.backend_repository = CodePipelineSource.git_hub(
+        #     "sree7k7/event-driven-microservices",
+        #     "main",
+        #     authentication=SecretValue.secrets_manager("/github/token")
+        # )
 
-        pipeline = CodePipeline(
-            self,
-            "MicroservicesPipelineStack",
-            pipeline_name="event-driven-microservices",
-            # cross_account_keys=True,
-            self_mutation=True,
-            synth=ShellStep("Synth",
-                            input=self.backend_repository,
-                            commands=[
-                                "pip install uv",
-                                "uv sync",
-                                "npx aws-cdk synth",
-                            ]
-                            )        
-        )
+        # pipeline = CodePipeline(
+        #     self,
+        #     "MicroservicesPipelineStack",
+        #     pipeline_name="event-driven-microservices",
+        #     # cross_account_keys=True,
+        #     self_mutation=True,
+        #     synth=ShellStep("Synth",
+        #                     input=self.backend_repository,
+        #                     commands=[
+        #                         "pip install uv",
+        #                         "uv sync",
+        #                         "npx aws-cdk synth",
+        #                     ]
+        #                     )        
+        # )
 
         ## Config parameters
         microservices_config= {
@@ -55,10 +55,10 @@ class EventDrivenMicroservicesStack(Stack):
             },
         }
 
-        stage = pipeline.add_stage(Stage(
+        stage = Stage(
             self,
             "microservices-stage", #change
             config = microservices_config,
             # env=cdk.Environment(account=microservices_config['AWS_Account'], region="eu-central-1")
             )
-        )
+        

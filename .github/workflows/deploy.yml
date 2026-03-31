@@ -1,0 +1,47 @@
+name: Deploy Event-Driven Microservices
+
+# Trigger the workflow on pushes to the main branch
+on:
+  push:
+    branches:
+      - main
+
+# Required for OIDC AWS Authentication
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for AWS CDK)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Install uv (Python Package Manager)
+        uses: astral-sh/setup-uv@v2
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install Dependencies
+        run: uv sync
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # <-- REPLACE THIS
+          aws-region: us-east-1
+
+      - name: CDK Deploy
+        # The --require-approval never flag stops CDK from pausing to ask "Are you sure?"
+        run: uv run cdk deploy --all --require-approval never
