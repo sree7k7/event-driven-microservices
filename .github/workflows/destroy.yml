@@ -1,18 +1,15 @@
-name: Deploy Event-Driven Microservices
+name: Destroy Event-Driven Microservices
 
-# Trigger the workflow on pushes to the main branch
+# ONLY run this manually from the GitHub Actions tab
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
-# Required for OIDC AWS Authentication
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +24,7 @@ jobs:
       - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
 
-      - name: Install uv (Python Package Manager)
+      - name: Install uv
         uses: astral-sh/setup-uv@v2
 
       - name: Set up Python 3.13
@@ -39,9 +36,10 @@ jobs:
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # <-- REPLACE THIS
+          role-to-assume: arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/GitHubActionsDeployRole # <-- REPLACE THIS
           aws-region: us-east-1
 
-      - name: CDK Deploy
-        # The --require-approval never flag stops CDK from pausing to ask "Are you sure?"
-        run: uv run cdk deploy --all --require-approval never
+      - name: CDK Destroy
+        # The --force flag is MANDATORY here. 
+        # Without it, the pipeline will hang forever waiting for a [y/N] prompt.
+        run: uv run cdk destroy --all --force
