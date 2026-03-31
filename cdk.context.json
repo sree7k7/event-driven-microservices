@@ -7,5 +7,9 @@
     "us-east-1d",
     "us-east-1e",
     "us-east-1f"
-  ]
+  ],
+  "hosted-zone:account=230150030147:domainName=srikanth.help:region=us-east-1": {
+    "Id": "/hostedzone/Z09298212LCS7P3M5N2EW",
+    "Name": "srikanth.help."
+  }
 }

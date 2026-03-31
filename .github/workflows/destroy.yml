@@ -42,4 +42,4 @@ jobs:
       - name: CDK Destroy
         # The --force flag is MANDATORY here. 
         # Without it, the pipeline will hang forever waiting for a [y/N] prompt.
-        run: uv run cdk destroy --all --force
+        run:  uv run cdk destroy --all --force

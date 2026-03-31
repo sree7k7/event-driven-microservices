@@ -1,9 +1,6 @@
 import aws_cdk as cdk
 import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
-import aws_cdk.aws_apigatewayv2 as apigwv2
-import aws_cdk.aws_apigatewayv2_integrations as integrations
-
 
 
 class Network(cdk.Stack):
@@ -37,14 +34,30 @@ class Network(cdk.Stack):
             "SqsEndpoint",
             service=ec2.InterfaceVpcEndpointAwsService.SQS
         )
+        # ecs, ecr endpoint for ecs tasks to pull container images from ECR without traversing the public internet
         self.vpc.add_interface_endpoint(
-            "SNSEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SNS
+            "ECSEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECS
         )
+        self.vpc.add_interface_endpoint(
+            "endpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER
+        )
+        self.vpc.add_interface_endpoint(
+            "ECREndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR
+        )
+        ## dynamodb endpoint for dynamodb tables to be accessed from within the VPC
         self.vpc.add_gateway_endpoint(
             "DynamoDBVPCEndpoint",
             service=ec2.GatewayVpcEndpointAwsService.DYNAMODB
         )        
+
+        ## s3 endpoint for s3 buckets to be accessed from within the VPC
+        self.vpc.add_gateway_endpoint(
+            "S3VPCEndpoint",
+            service=ec2.GatewayVpcEndpointAwsService.S3
+        )
 
         # Override the AWS Console 'Name' tag for the private subnets
         private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
