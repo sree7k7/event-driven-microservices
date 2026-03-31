@@ -36,7 +36,7 @@ jobs:
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/GitHubActionsDeployRole # <-- REPLACE THIS
+          role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # <-- REPLACE THIS
           aws-region: us-east-1
 
       - name: CDK Destroy
