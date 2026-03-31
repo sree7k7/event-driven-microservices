@@ -118,7 +118,7 @@ class application_stack(cdk.Stack):
 
         # 3. Create the Route and attach the integration
         self.http_api.add_routes(
-            path="/orders",
+            path="/api/orders",
             methods=[apigwv2.HttpMethod.POST],
             integration=process_order_integration
         )
@@ -238,8 +238,8 @@ class application_stack(cdk.Stack):
             certificate=new_certificate,
         ## apigw distribution for API Gateway with path pattern matching for /orders path to route to the API Gateway and all other paths to route to the ALB
             additional_behaviors = {
-                "/orders": cloudfront.BehaviorOptions(
-                    origin=origins.HttpOrigin(self.http_api.api_endpoint),
+                "/api/*": cloudfront.BehaviorOptions(
+                    origin=origins.HttpOrigin(f"{self.http_api.api_id}.execute-api.{self.region}.{self.url_suffix}"),
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED, # Disable caching for API Gateway routes to ensure clients always get fresh data
