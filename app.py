@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 import os
-
 import aws_cdk as cdk
-
-from event_driven_microservices.event_driven_microservices_stack import EventDrivenMicroservicesStack
-
+from event_driven_microservices.stage import Stage
 
 app = cdk.App()
-EventDrivenMicroservicesStack(app, "EventDrivenMicroservicesStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+# Your core configuration (moved out of the old pipeline stack)
+microservices_config = {
+    "network": {
+        "vpc_cidr": "10.0.0.0/16",
+        "cidr_mask": 24,
+        "availability_zones": ["us-east-1a", "us-east-1b"],
+        "public_subnet_cidrs": ["10.0.1.0/24", "10.0.2.0/24"],
+        "private_subnet_cidrs": ["10.0.3.0/24", "10.0.4.0/24"],
+        # Note: We removed the SSM lookup for the DB password here. 
+        # If you add RDS back later, do the SSM lookup directly inside database.py!
+    },
+}
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
-
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    # env=cdk.Environment(account='230150030147', region='us-east-1'),
-    env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+# Deploy the Stage directly to your AWS Account
+appstage = Stage(
+    app, 
+    "ProdStage", 
+    config=microservices_config,
+    env=cdk.Environment(
+        account=os.getenv('CDK_DEFAULT_ACCOUNT'), 
+        region=os.getenv('CDK_DEFAULT_REGION')
     )
+)
 
 app.synth()

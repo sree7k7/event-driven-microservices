@@ -1,3 +1,11 @@
 {
-  "ssm:account=230150030147:parameterName=/db/password:region=us-east-1": "testpwd"
+  "ssm:account=230150030147:parameterName=/db/password:region=us-east-1": "testpwd",
+  "availability-zones:account=230150030147:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ]
 }
