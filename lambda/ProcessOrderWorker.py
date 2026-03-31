@@ -27,26 +27,27 @@ def lambda_handler(event, context):
         customer_email = body.get('email', 'sree7k7@gmail.com')
         
         # 3. Generate unique IDs and timestamps
-        order_id = str(uuid.uuid4())
+        session_id = str(uuid.uuid4()) # This will be our partition key
         timestamp = datetime.utcnow().isoformat()
         
         # 4. Save the state to the Database
         table = dynamodb.Table(table_name)
         table.put_item(
             Item={
-                'orderId': order_id,
+                'sessionId': session_id,
+                'orderId': session_id, # Also use it as the orderId for consistency
                 'item': item_name,
                 'email': customer_email,
                 'status': 'PLACED',
                 'createdAt': timestamp
             }
         )
-        logger.info(f"Success: Order {order_id} saved to DynamoDB.")
+        logger.info(f"Success: Order {session_id} saved to DynamoDB.")
         
         # 5. Broadcast to the Nervous System (SNS)
         # We put the data in a dictionary, then turn it into a JSON string
         message_payload = {
-            'orderId': order_id,
+            'orderId': session_id,
             'email': customer_email,
             'item': item_name,
             'action': 'GENERATE_RECEIPT'
@@ -55,9 +56,9 @@ def lambda_handler(event, context):
         sns.publish(
             TopicArn=topic_arn,
             Message=json.dumps(message_payload),
-            Subject=f"New Order Received: {order_id}"
+            Subject=f"New Order Received: {session_id}"
         )
-        logger.info(f"Success: Order {order_id} broadcasted to SNS.")
+        logger.info(f"Success: Order {session_id} broadcasted to SNS.")
         
         # 6. Return the HTTP response to the user immediately
         return {
@@ -68,7 +69,7 @@ def lambda_handler(event, context):
             },
             'body': json.dumps({
                 'message': 'Order successfully placed!', 
-                'orderId': order_id
+                'orderId': session_id
             })
         }
         
