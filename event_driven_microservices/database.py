@@ -1,6 +1,14 @@
+import random
+import this
+import constructs
 import aws_cdk as cdk
-from aws_cdk import RemovalPolicy, Stack
+from aws_cdk import Duration, RemovalPolicy, Stack
+import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
+from aws_cdk import aws_logs as logs
+from aws_cdk import aws_ssm as ssm
+import aws_cdk.aws_rds as rds
+import aws_cdk.aws_lambda as lambdaFn
 import aws_cdk.aws_dynamodb as dynamodb
 
 
@@ -16,4 +24,6 @@ class Database(cdk.Stack):
             billing=dynamodb.Billing.on_demand(),
             partition_key=dynamodb.Attribute(name="sessionId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY, # NOT recommended for production, use with caution
+            point_in_time_recovery=False,
+            deletion_protection=False, # NOT recommended for production, use with caution
         )
