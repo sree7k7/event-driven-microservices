@@ -8,7 +8,7 @@ import aws_cdk.aws_apigatewayv2_integrations as integrations
 
 class Network(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, **kwargs) -> None:
-        super().__init__(scope, construct_id)
+        super().__init__(scope, construct_id, **kwargs)
         
         self.vpc = ec2.Vpc(
             self,

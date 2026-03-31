@@ -23,8 +23,8 @@ microservices_config = {
 
 # Define the deployment environment
 env = cdk.Environment(
-    account=os.getenv('CDK_DEFAULT_ACCOUNT'), 
-    region=os.getenv('CDK_DEFAULT_REGION')
+    account=os.getenv('CDK_DEFAULT_ACCOUNT', '230150030147'), # TODO: Replace with your actual AWS Account ID
+    region=os.getenv('CDK_DEFAULT_REGION', 'us-east-1')
 )
 
 # 1. Provision foundational state and messaging (Independent Stacks)
