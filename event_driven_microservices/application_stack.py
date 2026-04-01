@@ -185,7 +185,16 @@ class application_stack(cdk.Stack):
             "AppContainer",
             image=ecs.ContainerImage.from_ecr_repository(repo, "latest"),
             port_mappings=[ecs.PortMapping(container_port=8080, protocol=ecs.Protocol.TCP)],
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="CoffeeShopApp"),
+            logging =ecs.LogDrivers.aws_logs(
+                stream_prefix="CoffeeShopApp",
+                log_group=logs.LogGroup(
+                    self,
+                    "CoffeeShopAppLogs",
+                    log_group_name="/aws/ecs/Task/CoffeeShopApp",
+                    removal_policy=RemovalPolicy.DESTROY,
+                    retention=logs.RetentionDays.ONE_WEEK,
+                ),
+            ),
             # Inject the secret fields as environment variables
             secrets={
                 "DB_HOST": ecs.Secret.from_secrets_manager(db_secret, field="host"),
