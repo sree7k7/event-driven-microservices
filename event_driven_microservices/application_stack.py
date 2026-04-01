@@ -13,7 +13,8 @@ import aws_cdk.aws_servicediscovery as servicediscovery
 import aws_cdk.aws_cloudfront as cloudfront
 import aws_cdk.aws_cloudfront_origins as origins
 import aws_cdk.aws_route53 as route53
-import aws_cdk.aws_route53_targets as route53_targets
+import aws_cdk.aws_ecr as ecr
+import os
 import aws_cdk.aws_certificatemanager as acm
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
@@ -169,10 +170,20 @@ class application_stack(cdk.Stack):
             family="CoffeeShopTaskDefinition",
         )
 
+        # Grab the tag from the environment (Pipeline will inject this)
+        # If it's not there, default to "latest" for local testing
+        image_tag = os.environ.get("IMAGE_TAG", "latest")
+
+        repo = ecr.Repository.from_repository_name(
+            self, 
+            "CoffeeShopRepo", 
+            repository_name="coffeeshop-app" 
+        )
+
         ## add a container to the task definition with the image from the public ECR repository and a container port of 80
         container = self.ecs_task_definition.add_container(
             "AppContainer",
-            image=ecs.ContainerImage.from_registry("amazon/amazon-ecs-sample"),
+            image=ecs.ContainerImage.from_ecr_repository(repo, "latest"),
             port_mappings=[ecs.PortMapping(container_port=80, protocol=ecs.Protocol.TCP)],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="CoffeeShopApp"),
             # Inject the secret fields as environment variables
@@ -224,7 +235,6 @@ class application_stack(cdk.Stack):
             source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
         )
 
-
         ## ==========================================
         # Application Load Balancer (ALB) for routing traffic to the ECS service
         # ==========================================
@@ -242,7 +252,7 @@ class application_stack(cdk.Stack):
 
         ## Attach ecs service to the ALB Target Group with health check configuration
         listener.add_targets(
-            "EcsTarget", 
+            "ecstarget", 
             port=80, 
             targets=[
                 self.ecs_service.load_balancer_target(
