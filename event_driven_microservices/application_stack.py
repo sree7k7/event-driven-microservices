@@ -18,7 +18,7 @@ import aws_cdk.aws_certificatemanager as acm
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
-    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         domain_name = "srikanth.help" # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
@@ -60,6 +60,7 @@ class application_stack(cdk.Stack):
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
             log_group=process_order_fn_logs, # Use the defined log group for structured logging
+            tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
         )
 
         ## lambda function ReceiptGenerator
@@ -80,6 +81,7 @@ class application_stack(cdk.Stack):
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
             log_group=generate_receipt_fn_logs, # Use the defined log group for structured logging
+            tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
         )
 
         ## Grant the necessary permissions
@@ -123,9 +125,28 @@ class application_stack(cdk.Stack):
             integration=process_order_integration
         )
 
+        ## ALB security group to allow inbound traffic on port 80 from anywhere (you will need to add the actual ingress rules later)
+        alb_sg = ec2.SecurityGroup(
+            self,
+            "AlbSecurityGroup",
+            vpc=vpc,
+            description="Allow inbound traffic to ALB",
+            allow_all_outbound=True
+        )
+        alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(80))
+
         # ==========================================
         # ECS (The Workhorse for Heavy Lifting) cluster and task definition
         # ==========================================
+        
+        ## create ecs security group for the cluster and allow inbound traffic on port 80 from the ALB security group (you will need to add the actual ingress rules later)
+        ecs_sg = ec2.SecurityGroup(
+            self,
+            "EcsSecurityGroup",
+            vpc=vpc,
+            description="Allow traffic from ALB to ECS tasks"
+        )
+        ecs_sg.connections.allow_from(alb_sg, ec2.Port.tcp(80))
 
         self.ecs_cluster = ecs.Cluster(
             self,
@@ -153,7 +174,14 @@ class application_stack(cdk.Stack):
             "AppContainer",
             image=ecs.ContainerImage.from_registry("amazon/amazon-ecs-sample"),
             port_mappings=[ecs.PortMapping(container_port=80, protocol=ecs.Protocol.TCP)],
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="CoffeeShopApp")
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="CoffeeShopApp"),
+            # Inject the secret fields as environment variables
+            secrets={
+                "DB_HOST": ecs.Secret.from_secrets_manager(db_secret, field="host"),
+                "DB_PORT": ecs.Secret.from_secrets_manager(db_secret, field="port"),
+                "DB_USERNAME": ecs.Secret.from_secrets_manager(db_secret, field="username"),
+                "DB_PASSWORD": ecs.Secret.from_secrets_manager(db_secret, field="password"),
+            }
         )
 
 
@@ -173,7 +201,33 @@ class application_stack(cdk.Stack):
             )
         )
 
-        # Create the Public Application Load Balancer
+        ## Add the ingress rule for the ecs tasks to access the RDS database on port 5432
+        ec2.CfnSecurityGroupIngress(
+            self,
+            "EcsToRdsIngress",
+            group_id=rds_sg.security_group_id,
+            ip_protocol="tcp",
+            from_port=5432,
+            to_port=5432,
+            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
+        )
+
+        ## Add the ingress rule for the ecs tasks to access the Valkey cache on port 6379
+        ec2.CfnSecurityGroupIngress(
+            self,
+            "EcsToValkeyIngress",
+            group_id=valkey_sg.security_group_id,
+            ip_protocol="tcp",
+            from_port=6379,
+            to_port=6379,
+            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
+        )
+
+
+        ## ==========================================
+        # Application Load Balancer (ALB) for routing traffic to the ECS service
+        # ==========================================
+
         self.alb = elbv2.ApplicationLoadBalancer(
             self, "ALB", 
             vpc=vpc, 
@@ -213,11 +267,10 @@ class application_stack(cdk.Stack):
         )
 
         ## ACM certificate for the custom domain name
-        new_certificate = acm.DnsValidatedCertificate(
+        new_certificate = acm.Certificate(
             self, "Certificate",
             domain_name=website_sub_domain,
-            hosted_zone=hosted_zone,
-            region="us-east-1",
+            validation=acm.CertificateValidation.from_dns(hosted_zone)
         )
 
         # ==========================================

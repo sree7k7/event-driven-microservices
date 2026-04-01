@@ -6,10 +6,14 @@ from constructs import Construct
 class Network(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        ## ==========================================
+        ## VPC and Subnets
+        ## ==========================================
         
         self.vpc = ec2.Vpc(
             self,
-            'BackupVPC',
+            'VPC',
             ip_addresses=ec2.IpAddresses.cidr(config['network']['vpc_cidr']),
             availability_zones=config['network']['availability_zones'],
             subnet_configuration=[
@@ -67,3 +71,40 @@ class Network(cdk.Stack):
         public_subnets = self.vpc.select_subnets(subnet_group_name="public").subnets
         for i, subnet in enumerate(public_subnets, start=1):
             cdk.Tags.of(subnet).add("Name", f"/publicSubnet{i}")
+
+
+        ## ==========================================
+        ## Security Groups
+        ## ==========================================
+
+        ## VPC security group to allow all outbound traffic (you will need to add the actual ingress rules later)
+        self.vpc_sg = ec2.SecurityGroup(
+            self,
+            "VPCSecurityGroup",
+            vpc=self.vpc,
+            description="Allow all outbound traffic from VPC",
+            allow_all_outbound=True
+        )
+        self.vpc_sg.connections.allow_from_any_ipv4(ec2.Port.all_traffic())
+
+        # ## ECS tasks security group to allow all outbound traffic (you will need to add the actual ingress rules later)
+        # self.ecs_tasks_sg = ec2.SecurityGroup(
+        #     self,
+        #     "ECSTasksSecurityGroup",
+        #     vpc=self.vpc,
+        #     description="Allow all outbound traffic from ECS tasks",
+        #     allow_all_outbound=True
+        # )
+        # self.ecs_tasks_sg.connections.allow_from_any_ipv4(ec2.Port.all_traffic())
+
+        # ## RDS security group to allow inbound traffic on port 5432 from ECS tasks security group (you will need to add the actual ingress rules later)
+        # self.rds_sg = ec2.SecurityGroup(
+        #     self,
+        #     "RDSSecurityGroup",
+        #     vpc=self.vpc,
+        #     description="Allow all outbound traffic from RDS",
+        #     allow_all_outbound=True
+        # )
+        # self.rds_sg.connections.allow_from_security_group(self.ecs_tasks_sg, ec2.Port.tcp(5432))
+
+    

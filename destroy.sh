@@ -10,7 +10,12 @@
 #   (e.g., run `aws configure` or ensure your environment variables are set)
 
 # Define the list of stack names to be deleted
-STACKS_TO_DELETE="microservices-stage-Database microservices-stage-Messaging microservices-stage-Application microservices-stage-Network"
+STACKS_TO_DELETE="
+
+ Application 
+
+ "
+ 
 
 echo "Initiating deletion of specified CloudFormation stacks..."
 echo "======================================================="

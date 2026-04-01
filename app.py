@@ -29,10 +29,21 @@ env = cdk.Environment(
 
 # 1. Provision foundational state and messaging (Independent Stacks)
 messaging = Messaging(app, 'Messaging', config=microservices_config, env=env)
-database = Database(app, 'Database', config=microservices_config, env=env)
 
 # 2. Provision network (Independent Stack)
-network = Network(app, 'Network', config=microservices_config, env=env)
+network = Network(
+    app, 
+    'Network', 
+    config=microservices_config, 
+    env=env
+)
+
+database = Database(
+    app, 
+    'Database', 
+    vpc=network.vpc, 
+    config=microservices_config, env=env
+)
 
 # 3. Provision compute & API (Depends on the others)
 app_stack = application_stack(
@@ -42,6 +53,9 @@ app_stack = application_stack(
     sqs_queue=messaging.sqs_queue,
     sns_topic=messaging.sns_topic,
     dynamodb_table=database.table,
+    rds_sg=database.rds_sg,
+    valkey_sg=database.valkey_sg,
+    db_secret=database.db_instance.secret,
     config=microservices_config,
     env=env
 )
