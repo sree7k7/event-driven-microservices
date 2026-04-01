@@ -48,7 +48,7 @@ class Database(cdk.Stack):
             self,
             "ReceiptsDB",
             engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_15_3
+                version=rds.PostgresEngineVersion.VER_17_6
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
