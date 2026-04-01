@@ -140,14 +140,14 @@ class application_stack(cdk.Stack):
         # ECS (The Workhorse for Heavy Lifting) cluster and task definition
         # ==========================================
         
-        ## create ecs security group for the cluster and allow inbound traffic on port 80 from the ALB security group (you will need to add the actual ingress rules later)
+        ## create ecs security group for the cluster and allow inbound traffic on port 8080 from the ALB security group (you will need to add the actual ingress rules later)
         ecs_sg = ec2.SecurityGroup(
             self,
             "EcsSecurityGroup",
             vpc=vpc,
             description="Allow traffic from ALB to ECS tasks"
         )
-        ecs_sg.connections.allow_from(alb_sg, ec2.Port.tcp(80))
+        ecs_sg.connections.allow_from(alb_sg, ec2.Port.tcp(8080))
 
         self.ecs_cluster = ecs.Cluster(
             self,
@@ -180,7 +180,7 @@ class application_stack(cdk.Stack):
             repository_name="coffeeshop-app" 
         )
 
-        ## add a container to the task definition with the image from the public ECR repository and a container port of 80
+        ## add a container to the task definition with the image from the public ECR repository and a container port of 8080
         container = self.ecs_task_definition.add_container(
             "AppContainer",
             image=ecs.ContainerImage.from_ecr_repository(repo, "latest"),
@@ -253,7 +253,7 @@ class application_stack(cdk.Stack):
         ## Attach ecs service to the ALB Target Group with health check configuration
         listener.add_targets(
             "ecstarget", 
-            port=80, 
+            port=8080, 
             targets=[
                 self.ecs_service.load_balancer_target(
                     container_name="AppContainer", 
