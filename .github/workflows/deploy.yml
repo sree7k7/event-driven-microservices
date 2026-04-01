@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
       - name: Install uv (Python Package Manager)
         uses: astral-sh/setup-uv@v2
 
@@ -41,4 +44,4 @@ jobs:
 
       - name: CDK Deploy
         # The --require-approval never flag stops CDK from pausing to ask "Are you sure?"
-        run: npx aws-cdk deploy --all --require-approval never --concurrency 5
+        run: cdk deploy --all --require-approval never --concurrency 5
