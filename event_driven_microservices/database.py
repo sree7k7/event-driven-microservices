@@ -91,7 +91,7 @@ class Database(cdk.Stack):
             replication_group_description="Valkey Cache Cluster",
             cache_node_type="cache.t3.micro",
             engine="valkey",
-            num_cache_clusters=1,
+            num_cache_clusters=2,
             security_group_ids=[self.valkey_sg.security_group_id], # Attach the dedicated SG
             cache_subnet_group_name=cache_subnet_group.ref
         )
