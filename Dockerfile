@@ -22,7 +22,7 @@ RUN adduser --disabled-password --gecos '' appuser
 USER appuser
 
 # 7. Expose the port your application will listen on (Matches your ALB listener on port 80)
-EXPOSE 80
+EXPOSE 8080
 
 # 8. Start the server (Example uses Uvicorn for FastAPI)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

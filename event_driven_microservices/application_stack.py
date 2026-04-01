@@ -184,7 +184,7 @@ class application_stack(cdk.Stack):
         container = self.ecs_task_definition.add_container(
             "AppContainer",
             image=ecs.ContainerImage.from_ecr_repository(repo, "latest"),
-            port_mappings=[ecs.PortMapping(container_port=80, protocol=ecs.Protocol.TCP)],
+            port_mappings=[ecs.PortMapping(container_port=8080, protocol=ecs.Protocol.TCP)],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="CoffeeShopApp"),
             # Inject the secret fields as environment variables
             secrets={
