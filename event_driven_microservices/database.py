@@ -84,13 +84,14 @@ class Database(cdk.Stack):
             subnet_ids=[subnet.subnet_id for subnet in vpc.isolated_subnets]
         )
 
-        # 3. Create the Cache Cluster
-        self.cache_cluster = elasticache.CfnCacheCluster(
+        # 3. Create the Cache Cluster (using Replication Group for Valkey)
+        self.cache_cluster = elasticache.CfnReplicationGroup(
             self,
             "CacheCluster",
+            replication_group_description="Valkey Cache Cluster",
             cache_node_type="cache.t3.micro",
             engine="valkey",
-            num_cache_nodes=1,
-            vpc_security_group_ids=[self.valkey_sg.security_group_id], # Attach the dedicated SG
+            num_cache_clusters=1,
+            security_group_ids=[self.valkey_sg.security_group_id], # Attach the dedicated SG
             cache_subnet_group_name=cache_subnet_group.ref
         )
