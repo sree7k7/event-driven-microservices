@@ -93,5 +93,6 @@ class Database(cdk.Stack):
             engine="valkey",
             num_cache_clusters=2,
             security_group_ids=[self.valkey_sg.security_group_id], # Attach the dedicated SG
-            cache_subnet_group_name=cache_subnet_group.ref
+            cache_subnet_group_name=cache_subnet_group.ref,
+            transit_encryption_enabled=True, # Enable in-transit encryption for better security
         )
