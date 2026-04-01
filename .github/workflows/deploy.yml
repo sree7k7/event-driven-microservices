@@ -1,8 +1,11 @@
-name: Deploy Event-Driven Microservices
+name: Event-Driven Microservices CI/CD
 
-# Trigger the workflow on pushes to the main branch
 on:
   push:
+    branches:
+      - main
+  # Runs tests and scans on Pull Requests before they merge
+  pull_request:
     branches:
       - main
 
@@ -12,22 +15,72 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  # 1. SECRETS SCAN: Check for accidentally committed passwords or API keys
+  secrets-scan:
+    name: Secret Scanning
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Gitleaks needs the full history to scan properly
+      
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # 2. CODE QUALITY: Lint Python code to enforce style and catch basic errors
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      # Using Ruff because it is incredibly fast and standard for modern Python
+      - name: Install Ruff
+        run: pip install ruff
+        
+      - name: Run Ruff Linter
+        run: ruff check .
+
+  # 3. UNIT TESTS: Run your pytest suite
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js (for AWS CDK)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install Dependencies
+        run: uv sync
+
+      - name: Run Pytest
+        run: uv run pytest tests/ 
+
+  # 4. DEPLOY: Your existing CDK deployment step
+  deploy:
+    name: CDK Deploy
+    runs-on: ubuntu-latest
+    needs: [secrets-scan, code-quality, test] # Wait for all checks to pass
+    if: github.ref == 'refs/heads/main' # Only deploy when code is on the main branch
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
-
-      - name: Install uv (Python Package Manager)
+      - name: Install uv
         uses: astral-sh/setup-uv@v2
 
       - name: Set up Python 3.13
@@ -39,9 +92,8 @@ jobs:
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # <-- REPLACE THIS
+          role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # Ensure this matches your AWS role
           aws-region: us-east-1
 
       - name: CDK Deploy
-        # The --require-approval never flag stops CDK from pausing to ask "Are you sure?"
-        run: cdk deploy --all --require-approval never --concurrency 5
+        run: npx aws-cdk deploy --all --require-approval never --concurrency 5

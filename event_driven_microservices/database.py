@@ -87,7 +87,7 @@ class Database(cdk.Stack):
         # 3. Create the Cache Cluster (using Replication Group for Valkey)
         self.cache_cluster = elasticache.CfnReplicationGroup(
             self,
-            "CacheCluster",
+            "ValkeyReplicationGroup", # Changed logical ID to force a clean replacement
             replication_group_description="Valkey Cache Cluster",
             cache_node_type="cache.t3.micro",
             engine="valkey",
