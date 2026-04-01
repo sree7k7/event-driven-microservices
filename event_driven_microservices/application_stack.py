@@ -257,7 +257,7 @@ class application_stack(cdk.Stack):
             targets=[
                 self.ecs_service.load_balancer_target(
                     container_name="AppContainer", 
-                    container_port=80
+                    container_port=8080
                 )],
             health_check=elbv2.HealthCheck(
                 path="/",
