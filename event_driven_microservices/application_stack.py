@@ -260,7 +260,7 @@ class application_stack(cdk.Stack):
                     container_port=8080
                 )],
             health_check=elbv2.HealthCheck(
-                path="/",
+                path="/health",
                 interval=cdk.Duration.seconds(60),
                 timeout=cdk.Duration.seconds(5),
                 healthy_threshold_count=2,
