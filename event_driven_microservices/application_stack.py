@@ -195,7 +195,7 @@ class application_stack(cdk.Stack):
             desired_count=1,
             assign_public_ip=False, # We want to keep our tasks private and only accessible through the load balancer, so we set this to False
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"), # We want our ECS tasks to run in the private subnets for better security, so we specify the subnet group name here
-            security_groups=[ecs_sg], # Attach the security group to the service
+            security_groups=[ecs_sg],
             ## Enable service discovery here
             cloud_map_options=ecs.CloudMapOptions(
                 name="api"
@@ -234,7 +234,7 @@ class application_stack(cdk.Stack):
             vpc=vpc, 
             internet_facing=True,
             load_balancer_name="CoffeeShopALB",
-            security_group=alb_sg # Attach the security group to the ALB
+            security_group=alb_sg
         )
         ## Add a listener to the ALB on port 80 and forward traffic to the ECS service, 
         # and use HTTPS protocol for the listener to encrypt traffic between the client and the load balancer.
