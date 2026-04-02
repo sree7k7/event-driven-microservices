@@ -93,7 +93,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::230150030147:role/aws-to-github # Ensure this matches your AWS role
-          aws-region: us-east-1
+          aws-region: eu-central-1
 
       - name: CDK Deploy
         env:

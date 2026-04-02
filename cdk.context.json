@@ -11,5 +11,14 @@
   "hosted-zone:account=230150030147:domainName=srikanth.help:region=us-east-1": {
     "Id": "/hostedzone/Z09298212LCS7P3M5N2EW",
     "Name": "srikanth.help."
+  },
+  "availability-zones:account=230150030147:region=eu-central-1": [
+    "eu-central-1a",
+    "eu-central-1b",
+    "eu-central-1c"
+  ],
+  "hosted-zone:account=230150030147:domainName=srikanth.help:region=eu-central-1": {
+    "Id": "/hostedzone/Z09298212LCS7P3M5N2EW",
+    "Name": "srikanth.help."
   }
 }
