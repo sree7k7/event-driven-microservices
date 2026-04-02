@@ -11,7 +11,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 patch_all()
 
 # NEW: Configure the recorder with AsyncContext specifically for FastAPI
-xray_recorder.configure(context=AsyncContext(), service='CoffeeShopBaristaAPI')
+# xray_recorder.configure(context=AsyncContext(), service='CoffeeShopBaristaAPI')
+xray_recorder.configure(context=AsyncContext(), service='CoffeeShopBaristaAPI', plugins=())
+
 
 app = FastAPI()
 

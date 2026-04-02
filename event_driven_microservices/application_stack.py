@@ -181,6 +181,7 @@ class application_stack(cdk.Stack):
         )
         ecs_sg.connections.allow_from(alb_sg, ec2.Port.tcp(8080))
 
+
         self.ecs_cluster = ecs.Cluster(
             self,
             "EcsCluster",
@@ -261,11 +262,19 @@ class application_stack(cdk.Stack):
             cpu=32, 
             memory_limit_mib=256,
             port_mappings=[ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP)],
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="XRayDaemon"),
-            user="1337", # Run as non-root for security best practices
-            environment={
-                "AWS_EC2_METADATA_DISABLED": "true"
-            }
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="XRayDaemon",
+                log_group=logs.LogGroup(
+                    self,
+                    "XRayDaemonLogs",
+                    log_group_name="/aws/xray/daemon",
+                    removal_policy=RemovalPolicy.DESTROY,
+                    retention=logs.RetentionDays.ONE_WEEK,
+                ),
+            ),
+            # environment={
+            #     "AWS_EC2_METADATA_DISABLED": "true"
+            # }
         )
 
         ## add dependency so that the X-Ray container starts before the app container to ensure that the daemon is ready to receive traces when the app starts sending them

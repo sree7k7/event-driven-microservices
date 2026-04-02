@@ -30,36 +30,65 @@ class Network(cdk.Stack):
                 ]
         )
 
+                ## Create a dedicated Security Group for all Interface VPC Endpoints
+        self.vpc_endpoints_sg = ec2.SecurityGroup(
+            self,
+            "VpcEndpointsSg",
+            vpc=self.vpc,
+            description="Security Group for Interface VPC Endpoints"
+        )
+        self.vpc_endpoints_sg.add_ingress_rule(
+            peer=ec2.Peer.ipv4(self.vpc.vpc_cidr_block),
+            connection=ec2.Port.tcp(443),
+            description="Allow HTTPS traffic from within the VPC (including ECS tasks)"
+        )
+
         ## create vpc endpoints for SQS, SNS, and DynamoDB 
         # to ensure that our Lambda functions can access these services without traversing the public internet, 
         # enhancing security and reducing latency.
         # This is especially important for the GenerateReceiptWorker Lambda, which needs to access the SQS Queue and DynamoDB Table, and the ProcessOrderWorker Lambda, which needs to access the SNS Topic and DynamoDB Table.
         self.vpc.add_interface_endpoint(
             "SqsEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SQS
+            service=ec2.InterfaceVpcEndpointAwsService.SQS,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
         )
         # ecs, ecr endpoint for ecs tasks to pull container images from ECR without traversing the public internet
         self.vpc.add_interface_endpoint(
             "ECSEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECS
+            service=ec2.InterfaceVpcEndpointAwsService.ECS,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
         )
         self.vpc.add_interface_endpoint(
             "endpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER
+            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
+
         )
         self.vpc.add_interface_endpoint(
             "ECREndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR
+            service=ec2.InterfaceVpcEndpointAwsService.ECR,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
+
         )
         ## Secrets manager endpoint for ECS to retrieve the RDS credentials securely
         self.vpc.add_interface_endpoint(
             "SecretsManagerEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER
+            service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
+
         )
         ## CloudWatch Logs endpoint for ECS to send container logs securely
         self.vpc.add_interface_endpoint(
             "CloudWatchLogsEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS
+            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
+
         )
         ## dynamodb endpoint for dynamodb tables to be accessed from within the VPC
         self.vpc.add_gateway_endpoint(
@@ -76,19 +105,25 @@ class Network(cdk.Stack):
         ## x-ray endpoint for x-ray to be accessed from within the VPCcom.amazonaws.us-east-1.xray
         self.vpc.add_interface_endpoint(
             "XRayEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.XRAY
+            service=ec2.InterfaceVpcEndpointAwsService.XRAY,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
         )
 
         ## SSM Messages endpoint required for ECS Exec to work in isolated subnets
         self.vpc.add_interface_endpoint(
             "SSMMessagesEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES
+            service=ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
         )
 
         ## ssm endpoint required for ECS Exec to work in isolated subnets
         self.vpc.add_interface_endpoint(
             "SSMEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SSM
+            service=ec2.InterfaceVpcEndpointAwsService.SSM,
+            security_groups=[self.vpc_endpoints_sg],
+            open=True
         )
 
         # Override the AWS Console 'Name' tag for the private subnets
