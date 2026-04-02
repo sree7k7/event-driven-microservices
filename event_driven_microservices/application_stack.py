@@ -136,6 +136,7 @@ class application_stack(cdk.Stack):
             allow_all_outbound=True
         )
         alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(80))
+        alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(443))
 
         # ==========================================
         # ECS (The Workhorse for Heavy Lifting) cluster and task definition
@@ -305,7 +306,7 @@ class application_stack(cdk.Stack):
             default_behavior=cloudfront.BehaviorOptions(
                 origin=origins.LoadBalancerV2Origin(
                     self.alb,
-                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTPS_ONLY, # Ensure CloudFront communicates with the ALB over HTTPS for better security
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY, # Ensure CloudFront communicates with the ALB over HTTPS for better security
                     ),
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
