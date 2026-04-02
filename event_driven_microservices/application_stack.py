@@ -64,6 +64,27 @@ class application_stack(cdk.Stack):
             retention=logs.RetentionDays.ONE_WEEK,
         )
 
+        # ==========================================
+        # X-Ray Transaction Search & Application Signals Resource Policy
+        # ==========================================
+        logs.ResourcePolicy(
+            self,
+            "TransactionSearchXRayAccessPolicy",
+            policy_name="TransactionSearchXRayAccess",
+            policy_statements=[
+                iam.PolicyStatement(
+                    sid="TransactionSearchXRayAccess",
+                    effect=iam.Effect.ALLOW,
+                    principals=[iam.ServicePrincipal("xray.amazonaws.com")],
+                    actions=["logs:PutLogEvents"],
+                    resources=[
+                        f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/spans:*",
+                        f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/application-signals/data:*"
+                    ]
+                )
+            ]
+        )
+
         ## lambda funtion ProcessOrderWorker
         ##This function acts as the entry point. It handles the API Gateway request, writes to DynamoDB, and broadcasts the event to SNS.
         self.process_order_fn = lambdaFn.Function(
