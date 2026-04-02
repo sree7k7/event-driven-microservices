@@ -302,7 +302,10 @@ class application_stack(cdk.Stack):
         self.cloudfront_distribution = cloudfront.Distribution(
             self, "CloudFrontDistribution",
             default_behavior=cloudfront.BehaviorOptions(
-                origin=origins.LoadBalancerV2Origin(self.alb),
+                origin=origins.LoadBalancerV2Origin(
+                    self.alb,
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTPS_ONLY, # Ensure CloudFront communicates with the ALB over HTTPS for better security
+                    ),
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             ),
