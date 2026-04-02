@@ -55,6 +55,7 @@ app_stack = application_stack(
     dynamodb_table=database.table,
     rds_sg=database.rds_sg,
     valkey_sg=database.valkey_sg,
+    valkey_cluster=database.valkey_cluster,
     db_secret=database.db_instance.secret,
     config=microservices_config,
     env=env

@@ -23,7 +23,7 @@ import aws_cdk.aws_dynamodb as dynamodb
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
-    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, valkey_cluster, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         domain_name = "srikanth.help" # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
@@ -157,7 +157,7 @@ class application_stack(cdk.Stack):
             allow_all_outbound=True
         )
         alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(80))
-        alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(443))
+        # alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(443))
 
         # ==========================================
         # ECS (The Workhorse for Heavy Lifting) cluster and task definition
@@ -223,6 +223,11 @@ class application_stack(cdk.Stack):
                     retention=logs.RetentionDays.ONE_WEEK,
                 ),
             ),
+            # NEW: Give FastAPI the Valkey URL!
+            environment={
+                "VALKEY_HOST": valkey_cluster.attr_primary_end_point_address,
+                "VALKEY_PORT": valkey_cluster.attr_primary_end_point_port,
+            },
             # Inject the secret fields as environment variables
             secrets={
                 "DB_HOST": ecs.Secret.from_secrets_manager(db_secret, field="host"),

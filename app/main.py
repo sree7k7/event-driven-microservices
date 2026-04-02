@@ -1,18 +1,22 @@
 # app/main.py
 from fastapi import FastAPI
-# NEW: Import X-Ray SDK
-from aws_xray_sdk.core import xray_recorder, patch_all
-from aws_xray_sdk.ext.fastapi.middleware import XRayMiddleware
 import os
+
+from aws_xray_sdk.core import xray_recorder, patch_all
+from xraysink.context import AsyncContext
+from xraysink.asgi.middleware import xray_middleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Patch all supported libraries for X-Ray tracing
 patch_all()
 
+# NEW: Configure the recorder with AsyncContext specifically for FastAPI
+xray_recorder.configure(context=AsyncContext(), service='CoffeeShopBaristaAPI')
 
 app = FastAPI()
-# NEW: Configure the recorder and add the middleware to FastAPI
-xray_recorder.configure(service='CoffeeShopBaristaAPI')
-app.add_middleware(XRayMiddleware, app_name='CoffeeShopBaristaAPI')
+
+# NEW: Add the X-Ray middleware using Starlette's BaseHTTPMiddleware
+app.add_middleware(BaseHTTPMiddleware, dispatch=xray_middleware)
 
 @app.get("/")
 def read_root():

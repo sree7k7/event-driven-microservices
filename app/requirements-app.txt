@@ -1,3 +1,4 @@
 fastapi
 uvicorn
 aws-xray-sdk>=2.12.0
+xraysink
