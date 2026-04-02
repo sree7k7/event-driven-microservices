@@ -121,7 +121,7 @@ class application_stack(cdk.Stack):
 
         # 3. Create the Route and attach the integration
         self.http_api.add_routes(
-            path="/api/orders",
+            path="/api/*",
             methods=[apigwv2.HttpMethod.POST],
             integration=process_order_integration
         )
