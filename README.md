@@ -114,3 +114,23 @@ The Work: The API Gateway hits your ProcessOrderWorker Lambda. The Lambda saves 
 The Nervous System: The Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda safely in the background.
 
 The Security Cameras: Those dotted lines (-.->) at the bottom represent all your resources quietly sending their health data to CloudWatch and X-Ray without slowing down the user experience.
+
+
+## X-Ray
+
+```
+# 1. Create a new private repository for the X-Ray daemon
+aws ecr create-repository --repository-name xray-daemon --region us-east-1
+
+# 2. Log in (just in case your session expired)
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 230150030147.dkr.ecr.us-east-1.amazonaws.com
+
+# 3. Pull the public X-Ray daemon image to your laptop
+docker pull amazon/aws-xray-daemon:latest
+
+# 4. Re-tag it for your private AWS registry
+docker tag amazon/aws-xray-daemon:latest 230150030147.dkr.ecr.us-east-1.amazonaws.com/xray-daemon:latest
+
+# 5. Push the image securely into your private ECR vault
+docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/xray-daemon:latest
+```

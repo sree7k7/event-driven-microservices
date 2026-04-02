@@ -198,16 +198,6 @@ class application_stack(cdk.Stack):
             iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
         )
 
-        # 2. Add the X-Ray Daemon Sidecar Container
-        self.ecs_task_definition.add_container(
-            "XRayDaemonContainer",
-            image=ecs.ContainerImage.from_registry("amazon/aws-xray-daemon:latest"),
-            cpu=32, # It requires very little CPU
-            memory_limit_mib=256,
-            port_mappings=[ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP)],
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="XRayDaemon")
-        )
-
         # Grab the tag from the environment (Pipeline will inject this)
         # If it's not there, default to "latest" for local testing
         image_tag = os.environ.get("IMAGE_TAG", "latest")
@@ -242,6 +232,33 @@ class application_stack(cdk.Stack):
             }
         )
 
+        ## Lookup for newly created private X-Ray repo
+        xray_repo = ecr.Repository.from_repository_name(
+            self,
+            "XRayRepo",
+            repository_name="xray-daemon"
+        )
+
+        # Add the X-Ray Daemon Sidecar Container using your PRIVATE repo
+        self.ecs_task_definition.add_container(
+            "XRayDaemonContainer",
+            image=ecs.ContainerImage.from_ecr_repository(xray_repo, "latest"),
+            container_name="XRayDaemonContainer",
+            cpu=32, 
+            memory_limit_mib=256,
+            port_mappings=[ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP)],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="XRayDaemon")
+        )
+
+        ## add dependency so that the X-Ray container starts before the app container to ensure that the daemon is ready to receive traces when the app starts sending them
+        container.add_container_dependencies(
+            ecs.ContainerDependency(
+                container=self.ecs_task_definition.find_container("XRayDaemonContainer"),
+                condition=ecs.ContainerDependencyCondition.START
+            )
+        )
+
+
         ## ecs service that runs the task definition in the cluster with a desired count of 1 and assigns a public IP to the task
         self.ecs_service = ecs.FargateService(
             self, 
@@ -257,28 +274,6 @@ class application_stack(cdk.Stack):
             cloud_map_options=ecs.CloudMapOptions(
                 name="api"
             )
-        )
-
-        ## Add the ingress rule for the ecs tasks to access the RDS database on port 5432
-        ec2.CfnSecurityGroupIngress(
-            self,
-            "EcsToRdsIngress",
-            group_id=rds_sg.security_group_id,
-            ip_protocol="tcp",
-            from_port=5432,
-            to_port=5432,
-            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
-        )
-
-        ## Add the ingress rule for the ecs tasks to access the Valkey cache on port 6379
-        ec2.CfnSecurityGroupIngress(
-            self,
-            "EcsToValkeyIngress",
-            group_id=valkey_sg.security_group_id,
-            ip_protocol="tcp",
-            from_port=6379,
-            to_port=6379,
-            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
         )
 
         ## ==========================================
@@ -410,6 +405,28 @@ class application_stack(cdk.Stack):
             zone=hosted_zone,
             record_name=website_sub_domain,
             target=route53.RecordTarget.from_alias(route53_targets.CloudFrontTarget(self.cloudfront_distribution))
+        )
+
+                ## Add the ingress rule for the ecs tasks to access the RDS database on port 5432
+        ec2.CfnSecurityGroupIngress(
+            self,
+            "EcsToRdsIngress",
+            group_id=rds_sg.security_group_id,
+            ip_protocol="tcp",
+            from_port=5432,
+            to_port=5432,
+            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
+        )
+
+        ## Add the ingress rule for the ecs tasks to access the Valkey cache on port 6379
+        ec2.CfnSecurityGroupIngress(
+            self,
+            "EcsToValkeyIngress",
+            group_id=valkey_sg.security_group_id,
+            ip_protocol="tcp",
+            from_port=6379,
+            to_port=6379,
+            source_security_group_id=self.ecs_service.connections.security_groups[0].security_group_id
         )
 
         # Output the URL
