@@ -70,7 +70,8 @@ class application_stack(cdk.Stack):
         logs.ResourcePolicy(
             self,
             "TransactionSearchXRayAccessPolicy",
-            policy_name="TransactionSearchXRayAccess",
+            resource_policy_name="TransactionSearchXRayAccessPolicy",
+            # policy_name="TransactionSearchXRayAccess",
             policy_statements=[
                 iam.PolicyStatement(
                     sid="TransactionSearchXRayAccess",
