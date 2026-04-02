@@ -402,6 +402,7 @@ class application_stack(cdk.Stack):
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED, # Disable caching for API Gateway routes to ensure clients always get fresh data
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER, # Forward all headers except the Host header to API Gateway for proper routing
                 )
             },
             web_acl_id=self.web_acl.attr_arn
