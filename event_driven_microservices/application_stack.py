@@ -17,6 +17,9 @@ import aws_cdk.aws_route53_targets as route53_targets
 import aws_cdk.aws_ecr as ecr
 import os
 import aws_cdk.aws_certificatemanager as acm
+import aws_cdk.aws_wafv2 as wafv2
+import aws_cdk.aws_iam as iam
+import aws_cdk.aws_dynamodb as dynamodb
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
@@ -25,6 +28,24 @@ class application_stack(cdk.Stack):
         
         domain_name = "srikanth.help" # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
         website_sub_domain = f"microservices.{domain_name}" # e.g. microservices.srikanth.help
+
+        # ===========================================
+        # Route 53 Private Hosted Zone for internal service discovery and communication within the VPC
+        # ===========================================
+        ## import the existing hosted zone
+        hosted_zone = route53.HostedZone.from_lookup(
+            self,
+            "HostedZone",
+            domain_name="srikanth.help"
+        )
+
+        ## ACM certificate for the custom domain name
+        new_certificate = acm.Certificate(
+            self, "Certificate",
+            domain_name=website_sub_domain,
+            validation=acm.CertificateValidation.from_dns(hosted_zone)
+        )
+
         ## This configuration ensures that logs are structured in JSON format, making it easier to query and
         process_order_fn_logs = logs.LogGroup(
             self,
@@ -171,6 +192,21 @@ class application_stack(cdk.Stack):
             cpu=256,
             family="CoffeeShopTaskDefinition",
         )
+        
+        # 1. Give the ECS Task permission to write traces to X-Ray
+        self.ecs_task_definition.task_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
+        )
+
+        # 2. Add the X-Ray Daemon Sidecar Container
+        self.ecs_task_definition.add_container(
+            "XRayDaemonContainer",
+            image=ecs.ContainerImage.from_registry("amazon/aws-xray-daemon:latest"),
+            cpu=32, # It requires very little CPU
+            memory_limit_mib=256,
+            port_mappings=[ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP)],
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="XRayDaemon")
+        )
 
         # Grab the tag from the environment (Pipeline will inject this)
         # If it's not there, default to "latest" for local testing
@@ -205,7 +241,6 @@ class application_stack(cdk.Stack):
                 "DB_PASSWORD": ecs.Secret.from_secrets_manager(db_secret, field="password"),
             }
         )
-
 
         ## ecs service that runs the task definition in the cluster with a desired count of 1 and assigns a public IP to the task
         self.ecs_service = ecs.FargateService(
@@ -259,9 +294,10 @@ class application_stack(cdk.Stack):
         )
         ## Add a listener to the ALB on port 80 and forward traffic to the ECS service, 
         # and use HTTPS protocol for the listener to encrypt traffic between the client and the load balancer.
-        listener = self.alb.add_listener("publicListener", port=80)
+        # 1. Listen on Port 80 (HTTP)
+        listener = self.alb.add_listener("httpListener", port=80)
 
-        ## Attach ecs service to the ALB Target Group with health check configuration
+        # 2. Forward that traffic to the FastAPI Container on Port 8080
         listener.add_targets(
             "ecstarget", 
             port=8080, 
@@ -271,30 +307,70 @@ class application_stack(cdk.Stack):
                     container_port=8080
                 )],
             health_check=elbv2.HealthCheck(
-                path="/health",
-                interval=cdk.Duration.seconds(60),
+                path="/health", # Your FastAPI health route
+                interval=cdk.Duration.seconds(15), # Fast checks for development
                 timeout=cdk.Duration.seconds(5),
                 healthy_threshold_count=2,
                 unhealthy_threshold_count=2
             )   
         )
 
-        # ===========================================
-        # Route 53 Private Hosted Zone for internal service discovery and communication within the VPC
-        # ===========================================
-        ## import the existing hosted zone
-        hosted_zone = route53.HostedZone.from_lookup(
-            self,
-            "HostedZone",
-            domain_name="srikanth.help"
+        # ========================
+        ## AWS WAF for DDoS protection and web application security in front of the CloudFront distribution
+        # ========================
+
+        self.web_acl = wafv2.CfnWebACL(
+            self, "WebAcl",
+            default_action=wafv2.CfnWebACL.DefaultActionProperty(
+                allow=wafv2.CfnWebACL.AllowActionProperty()
+            ),
+            scope="CLOUDFRONT",
+            visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                cloud_watch_metrics_enabled=True,
+                metric_name="CoffeeShopWebAcl",
+                sampled_requests_enabled=True
+            ),
+            rules=[
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWS-AWSManagedRulesCommonRuleSet",
+                    priority=1,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(
+                        none={}
+                    ),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            name="AWSManagedRulesCommonRuleSet",
+                            vendor_name="AWS"
+                        )
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="AWS-AWSManagedRulesCommonRuleSet",
+                        sampled_requests_enabled=True
+                    )
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="RateLimitRule",
+                    priority=2,
+                    action=wafv2.CfnWebACL.RuleActionProperty(
+                        block=wafv2.CfnWebACL.BlockActionProperty() # Block them if they exceed the limit
+                    ),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
+                            limit=100, # Max requests per 5 minutes per IP
+                            aggregate_key_type="IP"
+                        )
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="RateLimitRule",
+                        sampled_requests_enabled=True
+                    )
+                )
+
+            ]
         )
 
-        ## ACM certificate for the custom domain name
-        new_certificate = acm.Certificate(
-            self, "Certificate",
-            domain_name=website_sub_domain,
-            validation=acm.CertificateValidation.from_dns(hosted_zone)
-        )
 
         # ==========================================
         # cloudfront dristribution in front of the ALB for global content delivery and DDoS protection
@@ -306,12 +382,13 @@ class application_stack(cdk.Stack):
             default_behavior=cloudfront.BehaviorOptions(
                 origin=origins.LoadBalancerV2Origin(
                     self.alb,
-                    protocol_policy=cloudfront.OriginProtocolPolicy.MATCH_VIEWER, # Ensure CloudFront communicates with the ALB over HTTPS for better security
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                    http_port=80, # Specify the port if your ALB is listening on a non-standard port
+                    
                     ),
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             ),
-            default_root_object="/*",
             price_class=cloudfront.PriceClass.PRICE_CLASS_100, # Use the lowest price class for cost optimization in this demo
             domain_names=[website_sub_domain],
             certificate=new_certificate,
@@ -323,7 +400,8 @@ class application_stack(cdk.Stack):
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED, # Disable caching for API Gateway routes to ensure clients always get fresh data
                 )
-            }
+            },
+            web_acl_id=self.web_acl.attr_arn
         )
 
         ## Route 53 record to point the custom domain to the CloudFront distribution
@@ -334,7 +412,6 @@ class application_stack(cdk.Stack):
             target=route53.RecordTarget.from_alias(route53_targets.CloudFrontTarget(self.cloudfront_distribution))
         )
 
-            
         # Output the URL
         cdk.CfnOutput(
             self, 
