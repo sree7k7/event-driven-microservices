@@ -13,6 +13,7 @@ import aws_cdk.aws_servicediscovery as servicediscovery
 import aws_cdk.aws_cloudfront as cloudfront
 import aws_cdk.aws_cloudfront_origins as origins
 import aws_cdk.aws_route53 as route53
+import aws_cdk.aws_route53_targets as route53_targets
 import aws_cdk.aws_ecr as ecr
 import os
 import aws_cdk.aws_certificatemanager as acm
@@ -121,7 +122,7 @@ class application_stack(cdk.Stack):
 
         # 3. Create the Route and attach the integration
         self.http_api.add_routes(
-            path="/api/*",
+            path="/api/orders",
             methods=[apigwv2.HttpMethod.POST],
             integration=process_order_integration
         )
@@ -324,6 +325,13 @@ class application_stack(cdk.Stack):
             }
         )
 
+        ## Route 53 record to point the custom domain to the CloudFront distribution
+        route53.ARecord(
+            self, "AliasRecord",
+            zone=hosted_zone,
+            record_name=website_sub_domain,
+            target=route53.RecordTarget.from_alias(route53_targets.CloudFrontTarget(self.cloudfront_distribution))
+        )
 
             
         # Output the URL
