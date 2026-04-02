@@ -86,6 +86,12 @@ class application_stack(cdk.Stack):
             tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
         )
 
+        ## grant the lambda function for xray permissions to write to x-ray. AWSXRayDaemonWriteAccess is an AWS managed policy that includes the necessary permissions for Lambda functions to send trace data to X-Ray, including PutTraceSegments and PutTelemetryRecords. By attaching this managed policy to the Lambda function's execution role, we ensure that it has the required permissions to interact with X-Ray without needing to manually specify each permission.
+        self.process_order_fn.role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
+        )
+
+
         ## lambda function ReceiptGenerator
         ## The ProcessOrderWorker Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
         self.generate_receipt_fn = lambdaFn.Function(
@@ -112,6 +118,9 @@ class application_stack(cdk.Stack):
         sns_topic.grant_publish(self.process_order_fn)
         sqs_queue.grant_send_messages(self.generate_receipt_fn)
         sqs_queue.grant_consume_messages(self.generate_receipt_fn)
+        self.generate_receipt_fn.role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
+        )
 
         # ==========================================
         # API GATEWAY (The VIP Host - HTTP API v2)
@@ -253,6 +262,7 @@ class application_stack(cdk.Stack):
             memory_limit_mib=256,
             port_mappings=[ecs.PortMapping(container_port=2000, protocol=ecs.Protocol.UDP)],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="XRayDaemon"),
+            user="1337", # Run as non-root for security best practices
             environment={
                 "AWS_EC2_METADATA_DISABLED": "true"
             }
@@ -281,7 +291,8 @@ class application_stack(cdk.Stack):
             ## Enable service discovery here
             cloud_map_options=ecs.CloudMapOptions(
                 name="api"
-            )
+            ),
+            enable_execute_command=True # Allows us to run commands directly inside the container
         )
 
         ## ==========================================
@@ -400,7 +411,7 @@ class application_stack(cdk.Stack):
                 "/api/*": cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(f"{self.http_api.api_id}.execute-api.{self.region}.{self.url_suffix}"),
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
-                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED, # Disable caching for API Gateway routes to ensure clients always get fresh data
                     origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER, # Forward all headers except the Host header to API Gateway for proper routing
                 )

@@ -63,6 +63,14 @@ class Database(cdk.Stack):
             credentials=rds.Credentials.from_username("postgres"), 
         )
 
+        ## permission for rds to access x-ray (so we can see database performance in our X-Ray traces!) AWSXRayDaemonWriteAccess
+        self.rds_sg.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.udp(2000),
+            description="Allow RDS to access X-Ray"
+        )
+
+
         # ==========================================
         # ElastiCache (Valkey)
         # ==========================================
@@ -95,4 +103,11 @@ class Database(cdk.Stack):
             security_group_ids=[self.valkey_sg.security_group_id], # Attach the dedicated SG
             cache_subnet_group_name=cache_subnet_group.ref,
             transit_encryption_enabled=True, # Enable in-transit encryption for better security
+        )
+
+        ## permission for valkey to access x-ray (so we can see cache performance in our X-Ray traces!) AWSXRayDaemonWriteAccess 
+        self.valkey_sg.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.udp(2000),
+            description="Allow Valkey to access X-Ray"
         )

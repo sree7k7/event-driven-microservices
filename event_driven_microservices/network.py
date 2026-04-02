@@ -73,6 +73,24 @@ class Network(cdk.Stack):
             service=ec2.GatewayVpcEndpointAwsService.S3
         )
 
+        ## x-ray endpoint for x-ray to be accessed from within the VPCcom.amazonaws.us-east-1.xray
+        self.vpc.add_interface_endpoint(
+            "XRayEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.XRAY
+        )
+
+        ## SSM Messages endpoint required for ECS Exec to work in isolated subnets
+        self.vpc.add_interface_endpoint(
+            "SSMMessagesEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES
+        )
+
+        ## ssm endpoint required for ECS Exec to work in isolated subnets
+        self.vpc.add_interface_endpoint(
+            "SSMEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.SSM
+        )
+
         # Override the AWS Console 'Name' tag for the private subnets
         private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
         for i, subnet in enumerate(private_subnets, start=1):

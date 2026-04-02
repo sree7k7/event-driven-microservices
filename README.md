@@ -114,9 +114,22 @@ The Work: The API Gateway hits your ProcessOrderWorker Lambda. The Lambda saves 
 The Nervous System: The Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda safely in the background.
 
 The Security Cameras: Those dotted lines (-.->) at the bottom represent all your resources quietly sending their health data to CloudWatch and X-Ray without slowing down the user experience.
+## docker
+
+1. Authenticate Docker with AWS
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 230150030147.dkr.ecr.us-east-1.amazonaws.com
+
+2. Build the Docker Image Locally
+docker build -t coffeeshop-app .
+
+3. Tag the Image for AWS
+docker tag coffeeshop-app:latest 230150030147.dkr.ecr.us-east-1.amazonaws.com/coffeeshop-app:latest
+
+4. Push the Image to ECR
+docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/coffeeshop-app:latest
 
 
-## X-Ray
+## X-Ray, 
 
 ```
 # 1. Create a new private repository for the X-Ray daemon
@@ -134,3 +147,27 @@ docker tag amazon/aws-xray-daemon:latest 230150030147.dkr.ecr.us-east-1.amazonaw
 # 5. Push the image securely into your private ECR vault
 docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/xray-daemon:latest
 ```
+
+## Connect to Container
+
+### Drop into an interactive shell
+
+aws ecs list-tasks --cluster CoffeeShopEcsCluster
+
+aws ecs execute-command \
+    --cluster CoffeeShopEcsCluster \
+    --task <YOUR_TASK_ID> \
+    --container AppContainer \
+    --interactive \
+    --command "/bin/sh"
+
+ eg: install: apt-get update && apt-get install -y curl,  curl -I https://xray.us-east-1.amazonaws.com
+
+ # 1. Test the FastAPI health endpoint (This automatically generates an X-Ray trace!)
+curl -s http://localhost:8080/health && echo -e "\n"
+
+# 2. Test the Database Configuration endpoint (Proves Secrets Manager is working!)
+curl -s http://localhost:8080/config-check && echo -e "\n"
+
+# 3. Power-User Trick: Verify the X-Ray sidecar daemon is actively listening for UDP traces on port 2000
+bash -c 'echo -n "" > /dev/udp/127.0.0.1/2000 && echo "X-Ray Daemon is actively listening!" || echo "Daemon not reachable"'

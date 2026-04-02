@@ -1,5 +1,5 @@
-# 1. Base Image: Use a slim, official Python image to reduce vulnerability surface area
-FROM python:3.12-slim
+# 1. Base Image:
+FROM python:3.12-slim-bookworm
 
 # 2. Environment Variables: Best practices for Python in Docker
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -7,6 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # 3. Set the working directory inside the container
 WORKDIR /app
+
+# Install system-level dependencies (like curl for debugging)
+RUN apt-get update && apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # 4. Install Dependencies first (This caches the layer so rebuilds are blazing fast)
 # Note: Create a 'requirements-app.txt' with your web app dependencies (e.g., fastapi, uvicorn, psycopg2)

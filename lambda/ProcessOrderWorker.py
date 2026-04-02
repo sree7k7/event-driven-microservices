@@ -1,9 +1,3 @@
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core import patch_all
-
-# Patch all supported libraries (like boto3) to automatically send traces to X-Ray
-patch_all()
-
 import json
 import boto3
 import os
