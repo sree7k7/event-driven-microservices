@@ -13,3 +13,6 @@ cdk.out
 .venv/
 uv.lock
 uv.py
+
+## ignore personal.md file
+personal.md

@@ -135,7 +135,6 @@ class application_stack(cdk.Stack):
             log_group=generate_receipt_fn_logs, # Use the defined log group for structured logging
             tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
             environment={
-                'TABLE_NAME': dynamodb_table.table_name,
                 'AWS_XRAY_TRACING_NAME': 'ReceiptGenerator'
             }
         )
