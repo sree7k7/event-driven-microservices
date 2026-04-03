@@ -25,22 +25,25 @@ microservices_config = {
     },
     "database": {
         "dynamodb_table_name": "CoffeeOrders",
-        "rds_instance_type": "t3.micro",
-        "cache_node_type": "cache.t3.micro",
-        "cache_num_nodes": 1
+        # "rds_instance_type": "t3.micro",
+        # "cache_node_type": "cache.t3.micro",
+        # "cache_num_nodes": 1
     },
     "application": {
         "domain_name": "srikanth.help", ## chanage based on your actual domain
         "subdomain": "coffeeshop",
-        "api_name": "CoffeeShopAPI",
+        "apigw_name": "CoffeeShopAPI",
         "lambda_timeout": 30,
         "lambda_memory": 512,
         "ecs_cluster_name": "CoffeeShopEcsCluster",
         "ecs_task_definition_family": "CoffeeShopTaskDefinition",
         "ecs_task_cpu": 256,
         "ecs_task_memory": 512, 
+        "ecr_repository_name": "coffeeshop-app", # create in manual or via CLI before deploying
+        "X-ray-tracing_repo": "xray-daemon", 
         "alb_name": "CoffeeShopALB",
         "alb_security_group_name": "AlbSecurityGroup",
+        "ecs_service_security_group_name": "EcsSecurityGroup",
         "log_retention_days": logs.RetentionDays.ONE_DAY,        
     }
 }

@@ -64,28 +64,6 @@ class application_stack(cdk.Stack):
             retention=config['application']['log_retention_days'],
         )
 
-        # ==========================================
-        # X-Ray Transaction Search & Application Signals Resource Policy
-        # ==========================================
-        # logs.ResourcePolicy(
-        #     self,
-        #     "TransactionSearchXRayAccessPolicy",
-        #     resource_policy_name="TransactionSearchXRayAccessPolicy",
-        #     # policy_name="TransactionSearchXRayAccess",
-        #     policy_statements=[
-        #         iam.PolicyStatement(
-        #             sid="TransactionSearchXRayAccess",
-        #             effect=iam.Effect.ALLOW,
-        #             principals=[iam.ServicePrincipal("xray.amazonaws.com")],
-        #             actions=["logs:PutLogEvents"],
-        #             resources=[
-        #                 f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/spans:*",
-        #                 f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/application-signals/data:*"
-        #             ]
-        #         )
-        #     ]
-        # )
-
         ## lambda funtion ProcessOrderWorker
         ##This function acts as the entry point. It handles the API Gateway request, writes to DynamoDB, and broadcasts the event to the Event Bus (EventBridge) for other services to consume. It also has structured logging and X-Ray tracing enabled for better observability. The environment variables include the DynamoDB table name and the Event Bus name, which it needs to interact with those services.
         self.process_order_fn = lambdaFn.Function(
@@ -95,9 +73,8 @@ class application_stack(cdk.Stack):
             runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ProcessOrderWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
-            # vpc=vpc,
-            # vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
-            timeout=cdk.Duration.seconds(10),
+            timeout=cdk.Duration.seconds(config['application']['lambda_timeout']),
+            memory_size=config['application']['lambda_memory'],
             logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
@@ -127,7 +104,8 @@ class application_stack(cdk.Stack):
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
-            timeout=cdk.Duration.seconds(10),
+            timeout=cdk.Duration.seconds(config['application']['lambda_timeout']),
+            memory_size=config['application']['lambda_memory'],
             events=[
                 lambdaFn_events.SqsEventSource(sqs_queue)
             ],
@@ -156,7 +134,7 @@ class application_stack(cdk.Stack):
         self.http_api = apigwv2.HttpApi(
             self,
             "OrderHttpApi",
-            api_name="Order Processing HTTP API",
+            api_name=config['application']['apigw_name'],
             description="The modern, fast front door for the event-driven system.",
             cors_preflight=apigwv2.CorsPreflightOptions(
                 allow_origins=["*"],
@@ -184,6 +162,7 @@ class application_stack(cdk.Stack):
         alb_sg = ec2.SecurityGroup(
             self,
             "AlbSecurityGroup",
+            security_group_name=config['application']['alb_security_group_name'],
             vpc=vpc,
             description="Allow inbound traffic to ALB",
             allow_all_outbound=True
@@ -208,7 +187,7 @@ class application_stack(cdk.Stack):
             self,
             "EcsCluster",
             vpc=vpc,
-            cluster_name="CoffeeShopEcsCluster",
+            cluster_name=config['application']['ecs_cluster_name'],
             default_cloud_map_namespace=ecs.CloudMapNamespaceOptions(
                 name="coffeeshop.internal",
                 type=servicediscovery.NamespaceType.DNS_PRIVATE, # Use private DNS for service discovery within the VPC
@@ -220,9 +199,9 @@ class application_stack(cdk.Stack):
         self.ecs_task_definition = ecs.FargateTaskDefinition(
             self,
             "EcsTaskDefinition",
-            memory_limit_mib=512,
-            cpu=256,
-            family="CoffeeShopTaskDefinition",
+            memory_limit_mib=config['application']['ecs_task_memory'],
+            cpu=config['application']['ecs_task_cpu'],
+            family=config['application']['ecs_task_definition_family'],
         )
         
         # 1. Give the ECS Task permission to write traces to X-Ray
@@ -237,7 +216,7 @@ class application_stack(cdk.Stack):
         repo = ecr.Repository.from_repository_name(
             self, 
             "CoffeeShopRepo", 
-            repository_name="coffeeshop-app" 
+            repository_name=config['application']['ecr_repository_name']
         )
 
         ## add a container to the task definition with the image from the public ECR repository and a container port of 8080
@@ -273,7 +252,7 @@ class application_stack(cdk.Stack):
         xray_repo = ecr.Repository.from_repository_name(
             self,
             "XRayRepo",
-            repository_name="xray-daemon"
+            repository_name=config['application']['X-ray-tracing_repo']
         )
 
         # Add the X-Ray Daemon Sidecar Container using your PRIVATE repo
@@ -291,7 +270,7 @@ class application_stack(cdk.Stack):
                     "XRayDaemonLogs",
                     log_group_name="/aws/xray/daemon",
                     removal_policy=RemovalPolicy.DESTROY,
-                    retention=logs.RetentionDays.ONE_WEEK,
+                    retention=config['application']['log_retention_days'],
                 ),
             ),
             # environment={
@@ -334,7 +313,7 @@ class application_stack(cdk.Stack):
             self, "ALB", 
             vpc=vpc, 
             internet_facing=True,
-            load_balancer_name="CoffeeShopALB",
+            load_balancer_name=config['application']['alb_name'],
             security_group=alb_sg
         )
         ## Add a listener to the ALB on port 80 and forward traffic to the ECS service, 
