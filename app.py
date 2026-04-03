@@ -33,8 +33,8 @@ microservices_config = {
         "domain_name": "srikanth.help", ## chanage based on your actual domain
         "subdomain": "coffeeshop",
         "apigw_name": "CoffeeShopAPI",
-        "lambda_timeout": 30,
-        "lambda_memory": 512,
+        "lambda_timeout": 10,
+        "lambda_memory": 256,
         "ecs_cluster_name": "CoffeeShopEcsCluster",
         "ecs_task_definition_family": "CoffeeShopTaskDefinition",
         "ecs_task_cpu": 256,

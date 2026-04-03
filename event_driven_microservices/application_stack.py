@@ -177,6 +177,7 @@ class application_stack(cdk.Stack):
         ecs_sg = ec2.SecurityGroup(
             self,
             "EcsSecurityGroup",
+            security_group_name=config['application']['ecs_service_security_group_name'],
             vpc=vpc,
             description="Allow traffic from ALB to ECS tasks"
         )
