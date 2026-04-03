@@ -1,10 +1,10 @@
+## AWS event driven microservices.
 
+In progress .......
 
+Microservices decoupled architecture with distinct paths, container and serverless pathways.
 
-aws ssm put-parameter \                                                                                            <region:us-east-1> 
-    --name "/github/token" \
-    --value "xxxxx" \
-    --type SecureString
+### Design
 
 ```mermaid
 
@@ -116,6 +116,7 @@ The Nervous System: The Lambda shouts to the SNS Topic, which drops the message 
 The Security Cameras: Those dotted lines (-.->) at the bottom represent all your resources quietly sending their health data to CloudWatch and X-Ray without slowing down the user experience.
 ## docker
 
+```
 1. Authenticate Docker with AWS
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 230150030147.dkr.ecr.us-east-1.amazonaws.com
 
@@ -127,7 +128,7 @@ docker tag coffeeshop-app:latest 230150030147.dkr.ecr.us-east-1.amazonaws.com/co
 
 4. Push the Image to ECR
 docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/coffeeshop-app:latest
-
+```
 
 ## X-Ray, 
 
@@ -152,6 +153,7 @@ docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/xray-daemon:latest
 
 ### Drop into an interactive shell
 
+```
 aws ecs list-tasks --cluster CoffeeShopEcsCluster
 
 aws ecs execute-command \
@@ -160,10 +162,12 @@ aws ecs execute-command \
     --container AppContainer \
     --interactive \
     --command "/bin/sh"
+```
 
- eg: install: apt-get update && apt-get install -y curl,  curl -I https://xray.us-east-1.amazonaws.com
+ eg: install: ```apt-get update && apt-get install -y curl```,  ```curl -I https://xray.us-east-1.amazonaws.com```
 
- # 1. Test the FastAPI health endpoint (This automatically generates an X-Ray trace!)
+```
+# 1. Test the FastAPI health endpoint (This automatically generates an X-Ray trace!)
 curl -s http://localhost:8080/health && echo -e "\n"
 
 # 2. Test the Database Configuration endpoint (Proves Secrets Manager is working!)
@@ -171,3 +175,4 @@ curl -s http://localhost:8080/config-check && echo -e "\n"
 
 # 3. Power-User Trick: Verify the X-Ray sidecar daemon is actively listening for UDP traces on port 2000
 bash -c 'echo -n "" > /dev/udp/127.0.0.1/2000 && echo "X-Ray Daemon is actively listening!" || echo "Daemon not reachable"'
+```

@@ -91,7 +91,7 @@ class application_stack(cdk.Stack):
         self.process_order_fn = lambdaFn.Function(
             self,
             "ProcessOrderWorker",
-            runtime=lambdaFn.Runtime.PYTHON_3_12,
+            runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ProcessOrderWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             # vpc=vpc,
@@ -119,7 +119,7 @@ class application_stack(cdk.Stack):
         self.generate_receipt_fn = lambdaFn.Function(
             self,
             "ReceiptGenerator",
-            runtime=lambdaFn.Runtime.PYTHON_3_12,
+            runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ReceiptGenerator.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             vpc=vpc,
@@ -369,7 +369,7 @@ class application_stack(cdk.Stack):
             default_action=wafv2.CfnWebACL.DefaultActionProperty(
                 allow=wafv2.CfnWebACL.AllowActionProperty()
             ),
-            scope="CLOUDFRONT",
+            scope="REGIONAL",
             visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
                 cloud_watch_metrics_enabled=True,
                 metric_name="CoffeeShopWebAcl",
@@ -447,7 +447,14 @@ class application_stack(cdk.Stack):
                     origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER, # Forward all headers except the Host header to API Gateway for proper routing
                 )
             },
-            web_acl_id=self.web_acl.attr_arn
+            # web_acl_id=self.web_acl.attr_arn # Removed because WAF is now REGIONAL
+        )
+
+        ## Associate the WAF WebACL with the ALB
+        wafv2.CfnWebACLAssociation(
+            self, "WebAclAssociation",
+            resource_arn=self.alb.load_balancer_arn,
+            web_acl_arn=self.web_acl.attr_arn
         )
 
         ## Route 53 record to point the custom domain to the CloudFront distribution
