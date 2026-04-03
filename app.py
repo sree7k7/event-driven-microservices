@@ -15,7 +15,7 @@ microservices_config = {
     "network": {
         "vpc_cidr": "10.0.0.0/16",
         "cidr_mask": 24,
-        "availability_zones": ["eu-central-1a", "eu-central-1b"],
+        "availability_zones": ["us-east-1a", "us-east-1b"],
         "public_subnet_cidrs": ["10.0.1.0/24", "10.0.2.0/24"],
         "private_subnet_cidrs": ["10.0.3.0/24", "10.0.4.0/24"],
     },
@@ -24,8 +24,7 @@ microservices_config = {
 # Define the deployment environment
 env = cdk.Environment(
     account=os.getenv('CDK_DEFAULT_ACCOUNT', '230150030147'), # TODO: Replace with your actual AWS Account ID
-    # region=os.getenv('CDK_DEFAULT_REGION', 'eu-central-1')
-    region="eu-central-1"
+    region=os.getenv('CDK_DEFAULT_REGION', 'us-east-1')
 )
 
 # 1. Provision foundational state and messaging (Independent Stacks)
