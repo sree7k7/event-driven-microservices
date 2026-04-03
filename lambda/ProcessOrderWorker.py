@@ -75,11 +75,11 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Origin': '*' # Standard for web apps
             },
             'body': json.dumps({
-                'message': 'Order successfully placed!', 
+                'message': 'Order successfully placed!, ', 
                 'orderId': session_id
             })
         }
-        
+        # AWS_SECRET_KEY=lkasdjxpp))/UJSSKDJA== AWS_ACCESS_KEY_ID=AKIA5Z6QG2Q5L7XQ6Z3 AWS_REGION=us-east-1
     except Exception as e:
         logger.error(f"Critical Failure: {str(e)}")
         return {
