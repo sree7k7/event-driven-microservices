@@ -7,19 +7,23 @@ from aws_cdk import Duration, RemovalPolicy, Stack
 from constructs import Construct
 
 import aws_cdk.aws_sqs as sqs
-import aws_cdk.aws_sns as sns
+import aws_cdk.aws_events as events
 import aws_cdk.aws_sns_subscriptions as subscriptions
+import aws_cdk.aws_logs as logs
+import aws_cdk.aws_events_targets as targets
 
 
 class Messaging(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        ## sns topic
-        self.sns_topic = sns.Topic(
+        ## Create an aws eventbridge topic to receive json payload from lambda functions
+        self.events = events.EventBus(
             self,
-            "OrderTopic"
+            "ReceiptEventBus", 
+            event_bus_name="ReceiptEventBus"
         )
+
         ## the Quarantine Queue (DLQ)
         self.dlq = sqs.Queue(self, "ReceiptDLQ")
         
@@ -27,6 +31,7 @@ class Messaging(cdk.Stack):
         self.sqs_queue = sqs.Queue(
             self,
             "ReceiptQueue",
+            queue_name="ReceiptQueue",
             visibility_timeout=Duration.seconds(300),
             retention_period=Duration.days(1),
             removal_policy=RemovalPolicy.DESTROY,
@@ -35,13 +40,38 @@ class Messaging(cdk.Stack):
                     queue=self.dlq
                 )
         )
+
+        # ==========================================
+        # EventBridge Rules & Targets
+        # ==========================================
         
-        ## sns subscription 
-        self.sns_subscription = sns.Subscription(
+        # 1. Route 'OrderPlaced' events to the SQS Queue
+        events.Rule(
             self,
-            "OrderSubscription",
-            topic=self.sns_topic,
-            protocol=sns.SubscriptionProtocol.SQS,
-            endpoint=self.sqs_queue.queue_arn
+            "RouteOrdersToReceiptQueue",
+            event_bus=self.events,
+            event_pattern=events.EventPattern(
+                source=["com.coffeeshop.orders"],
+                detail_type=["OrderPlaced"]
+            ),
+            targets=[targets.SqsQueue(self.sqs_queue)]
         )
-        self.sns_topic.add_subscription(subscriptions.SqsSubscription(self.sqs_queue))
+
+        # 2. Setup logging for the EventBus via a Target Rule
+        bus_log_group = logs.LogGroup(
+            self,
+            "ReceiptEventBusLogs",
+            log_group_name="/aws/events/ReceiptEventBus",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
+        
+        events.Rule(
+            self,
+            "LogAllOrdersEvents",
+            event_bus=self.events,
+            event_pattern=events.EventPattern(
+                source=["com.coffeeshop.orders"]
+            ),
+            targets=[targets.CloudWatchLogGroup(bus_log_group)]
+        )

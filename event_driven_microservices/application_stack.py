@@ -23,7 +23,7 @@ import aws_cdk.aws_dynamodb as dynamodb
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
-    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, sns_topic, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, valkey_cluster, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, event_bus, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, valkey_cluster, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         domain_name = "srikanth.help" # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
@@ -87,26 +87,27 @@ class application_stack(cdk.Stack):
         # )
 
         ## lambda funtion ProcessOrderWorker
-        ##This function acts as the entry point. It handles the API Gateway request, writes to DynamoDB, and broadcasts the event to SNS.
+        ##This function acts as the entry point. It handles the API Gateway request, writes to DynamoDB, and broadcasts the event to the Event Bus (EventBridge) for other services to consume. It also has structured logging and X-Ray tracing enabled for better observability. The environment variables include the DynamoDB table name and the Event Bus name, which it needs to interact with those services.
         self.process_order_fn = lambdaFn.Function(
             self,
             "ProcessOrderWorker",
+            # lambda_name="ProcessOrderWorker",
             runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ProcessOrderWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
             # vpc=vpc,
             # vpc_subnets=ec2.SubnetSelection(subnet_group_name="private"),
             timeout=cdk.Duration.seconds(10),
-            environment={
-                'TABLE_NAME': dynamodb_table.table_name,
-                'TOPIC_ARN': sns_topic.topic_arn,
-                'AWS_XRAY_TRACING_NAME': 'ProcessOrderWorker'
-            },
             logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
             log_group=process_order_fn_logs, # Use the defined log group for structured logging
             tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
+            environment={
+                'TABLE_NAME': dynamodb_table.table_name,
+                'EVENT_BUS_NAME': event_bus.event_bus_name,
+                'AWS_XRAY_TRACING_NAME': 'ProcessOrderWorker'
+            },
         )
 
         ## grant the lambda function for xray permissions to write to x-ray. AWSXRayDaemonWriteAccess is an AWS managed policy that includes the necessary permissions for Lambda functions to send trace data to X-Ray, including PutTraceSegments and PutTelemetryRecords. By attaching this managed policy to the Lambda function's execution role, we ensure that it has the required permissions to interact with X-Ray without needing to manually specify each permission.
@@ -116,10 +117,11 @@ class application_stack(cdk.Stack):
 
 
         ## lambda function ReceiptGenerator
-        ## The ProcessOrderWorker Lambda shouts to the SNS Topic, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
+        ## The ProcessOrderWorker Lambda shouts to the Event Bus, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
         self.generate_receipt_fn = lambdaFn.Function(
             self,
             "ReceiptGenerator",
+            # lambda_name="ReceiptGenerator",
             runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ReceiptGenerator.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
@@ -141,7 +143,6 @@ class application_stack(cdk.Stack):
 
         ## Grant the necessary permissions
         dynamodb_table.grant_read_write_data(self.process_order_fn)
-        sns_topic.grant_publish(self.process_order_fn)
         sqs_queue.grant_send_messages(self.generate_receipt_fn)
         sqs_queue.grant_consume_messages(self.generate_receipt_fn)
         self.generate_receipt_fn.role.add_managed_policy(

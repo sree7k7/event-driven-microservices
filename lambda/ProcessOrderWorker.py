@@ -11,7 +11,8 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients outside the handler to keep them "warm" for faster execution
 dynamodb = boto3.resource('dynamodb')
-sns = boto3.client('sns')
+# NEW: Swapped the SNS client for the EventBridge client
+events_client = boto3.client('events')
 
 def lambda_handler(event, context):
     logger.info(f"Incoming API Request: {json.dumps(event)}")
@@ -19,7 +20,7 @@ def lambda_handler(event, context):
     try:
         # 1. Load environment variables
         table_name = os.environ.get('TABLE_NAME')
-        topic_arn = os.environ.get('TOPIC_ARN')
+        event_bus_name = os.environ.get('EVENT_BUS_NAME') # <-- NEW: Event Bus Name
         
         # 2. Parse the body sent from the user (API Gateway wraps it in a string)
         body = json.loads(event.get('body', '{}'))
@@ -35,7 +36,7 @@ def lambda_handler(event, context):
         table.put_item(
             Item={
                 'sessionId': session_id,
-                'orderId': session_id, # Also use it as the orderId for consistency
+                'orderId': session_id, 
                 'item': item_name,
                 'email': customer_email,
                 'status': 'PLACED',
@@ -44,7 +45,7 @@ def lambda_handler(event, context):
         )
         logger.info(f"Success: Order {session_id} saved to DynamoDB.")
         
-        # 5. Broadcast to the Nervous System (SNS)
+        # 5. Broadcast to the Event Bus (EventBridge)
         # We put the data in a dictionary, then turn it into a JSON string
         message_payload = {
             'orderId': session_id,
@@ -53,12 +54,18 @@ def lambda_handler(event, context):
             'action': 'GENERATE_RECEIPT'
         }
         
-        sns.publish(
-            TopicArn=topic_arn,
-            Message=json.dumps(message_payload),
-            Subject=f"New Order Received: {session_id}"
+        # NEW: Send the precisely formatted event to EventBridge
+        events_client.put_events(
+            Entries=[
+                {
+                    'Source': 'com.coffeeshop.orders', # The custom source of our event
+                    'DetailType': 'OrderPlaced',       # The specific action that occurred
+                    'Detail': json.dumps(message_payload), # Our actual business data
+                    'EventBusName': event_bus_name     # The target bus
+                }
+            ]
         )
-        logger.info(f"Success: Order {session_id} broadcasted to SNS.")
+        logger.info(f"Success: Order {session_id} published to EventBridge.")
         
         # 6. Return the HTTP response to the user immediately
         return {

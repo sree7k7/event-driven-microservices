@@ -51,7 +51,7 @@ app_stack = application_stack(
     'Application',
     vpc=network.vpc,
     sqs_queue=messaging.sqs_queue,
-    sns_topic=messaging.sns_topic,
+    event_bus=messaging.events,
     dynamodb_table=database.table,
     rds_sg=database.rds_sg,
     valkey_sg=database.valkey_sg,
