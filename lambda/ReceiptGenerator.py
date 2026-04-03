@@ -13,16 +13,16 @@ def lambda_handler(event, context):
             # 1. Parse the outer SQS Envelope
             sqs_body = json.loads(record['body'])
             
-            # 2. Parse the inner SNS Envelope
-            # Because SNS forwarded this to SQS, the actual payload is inside the 'Message' key
-            sns_message_string = sqs_body.get('Message')
+            # 2. Parse the EventBridge Envelope
+            # EventBridge puts our custom payload inside the 'detail' key
+            payload = sqs_body.get('detail')
             
-            if not sns_message_string:
-                logger.warning("No SNS Message found. Skipping record.")
+            if not payload:
+                logger.warning("No EventBridge payload found. Skipping record.")
                 continue
                 
             # 3. Parse our actual application data
-            payload = json.loads(sns_message_string)
+            payload = json.loads(payload) if isinstance(payload, str) else payload
             order_id = payload.get('orderId', 'N/A')
             email = payload.get('email', 'N/A')
             item = payload.get('item', 'N/A')

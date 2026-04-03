@@ -91,7 +91,7 @@ class application_stack(cdk.Stack):
         self.process_order_fn = lambdaFn.Function(
             self,
             "ProcessOrderWorker",
-            # lambda_name="ProcessOrderWorker",
+            function_name="ProcessOrderWorker",
             runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ProcessOrderWorker.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
@@ -111,17 +111,18 @@ class application_stack(cdk.Stack):
         )
 
         ## grant the lambda function for xray permissions to write to x-ray. AWSXRayDaemonWriteAccess is an AWS managed policy that includes the necessary permissions for Lambda functions to send trace data to X-Ray, including PutTraceSegments and PutTelemetryRecords. By attaching this managed policy to the Lambda function's execution role, we ensure that it has the required permissions to interact with X-Ray without needing to manually specify each permission.
-        self.process_order_fn.role.add_managed_policy(
-            iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
-        )
-
+        dynamodb_table.grant_read_write_data(self.process_order_fn)
+        event_bus.grant_put_events_to(self.process_order_fn)
+        # self.process_order_fn.role.add_managed_policy(
+        #     iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
+        # )
 
         ## lambda function ReceiptGenerator
         ## The ProcessOrderWorker Lambda shouts to the Event Bus, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
         self.generate_receipt_fn = lambdaFn.Function(
             self,
             "ReceiptGenerator",
-            # lambda_name="ReceiptGenerator",
+            function_name="ReceiptGenerator",
             runtime=lambdaFn.Runtime.PYTHON_3_14,
             handler="ReceiptGenerator.lambda_handler",
             code=lambdaFn.Code.from_asset("lambda"),
@@ -142,12 +143,11 @@ class application_stack(cdk.Stack):
         )
 
         ## Grant the necessary permissions
-        dynamodb_table.grant_read_write_data(self.process_order_fn)
         sqs_queue.grant_send_messages(self.generate_receipt_fn)
         sqs_queue.grant_consume_messages(self.generate_receipt_fn)
-        self.generate_receipt_fn.role.add_managed_policy(
-            iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
-        )
+        # self.generate_receipt_fn.role.add_managed_policy(
+        #     iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
+        # )
 
         # ==========================================
         # API GATEWAY (The VIP Host - HTTP API v2)
