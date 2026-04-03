@@ -99,7 +99,8 @@ class application_stack(cdk.Stack):
             timeout=cdk.Duration.seconds(10),
             environment={
                 'TABLE_NAME': dynamodb_table.table_name,
-                'TOPIC_ARN': sns_topic.topic_arn
+                'TOPIC_ARN': sns_topic.topic_arn,
+                'AWS_XRAY_TRACING_NAME': 'ProcessOrderWorker'
             },
             logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
@@ -133,6 +134,10 @@ class application_stack(cdk.Stack):
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
             log_group=generate_receipt_fn_logs, # Use the defined log group for structured logging
             tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
+            environment={
+                'TABLE_NAME': dynamodb_table.table_name,
+                'AWS_XRAY_TRACING_NAME': 'ReceiptGenerator'
+            }
         )
 
         ## Grant the necessary permissions

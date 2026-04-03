@@ -110,27 +110,27 @@ class Network(cdk.Stack):
             open=True
         )
 
-        ## SSM Messages endpoint required for ECS Exec to work in isolated subnets
-        self.vpc.add_interface_endpoint(
-            "SSMMessagesEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES,
-            security_groups=[self.vpc_endpoints_sg],
-            open=True
-        )
+        # ## SSM Messages endpoint required for ECS Exec to work in isolated subnets
+        # self.vpc.add_interface_endpoint(
+        #     "SSMMessagesEndpoint",
+        #     service=ec2.InterfaceVpcEndpointAwsService.SSM_MESSAGES,
+        #     security_groups=[self.vpc_endpoints_sg],
+        #     open=True
+        # )
 
-        ## ssm endpoint required for ECS Exec to work in isolated subnets
-        self.vpc.add_interface_endpoint(
-            "SSMEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SSM,
-            security_groups=[self.vpc_endpoints_sg],
-            open=True
-        )
+        # ## ssm endpoint required for ECS Exec to work in isolated subnets
+        # self.vpc.add_interface_endpoint(
+        #     "SSMEndpoint",
+        #     service=ec2.InterfaceVpcEndpointAwsService.SSM,
+        #     security_groups=[self.vpc_endpoints_sg],
+        #     open=True
+        # )
 
         # Override the AWS Console 'Name' tag for the private subnets
-        private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
-        for i, subnet in enumerate(private_subnets, start=1):
-            cdk.Tags.of(subnet).add("Name", f"/privateSubnet{i}")
+        # private_subnets = self.vpc.select_subnets(subnet_group_name="private").subnets
+        # for i, subnet in enumerate(private_subnets, start=1):
+        #     cdk.Tags.of(subnet).add("Name", f"/privateSubnet{i}")
 
-        public_subnets = self.vpc.select_subnets(subnet_group_name="public").subnets
-        for i, subnet in enumerate(public_subnets, start=1):
-            cdk.Tags.of(subnet).add("Name", f"/publicSubnet{i}")
+        # public_subnets = self.vpc.select_subnets(subnet_group_name="public").subnets
+        # for i, subnet in enumerate(public_subnets, start=1):
+        #     cdk.Tags.of(subnet).add("Name", f"/publicSubnet{i}")
