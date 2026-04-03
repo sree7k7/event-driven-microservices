@@ -106,7 +106,6 @@ class application_stack(cdk.Stack):
             environment={
                 'TABLE_NAME': dynamodb_table.table_name,
                 'EVENT_BUS_NAME': event_bus.event_bus_name,
-                'AWS_XRAY_TRACING_NAME': 'ProcessOrderWorker'
             },
         )
 
