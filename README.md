@@ -222,3 +222,8 @@ curl -s http://localhost:8080/config-check && echo -e "\n"
 # 3. Power-User Trick: Verify the X-Ray sidecar daemon is actively listening for UDP traces on port 2000
 bash -c 'echo -n "" > /dev/udp/127.0.0.1/2000 && echo "X-Ray Daemon is actively listening!" || echo "Daemon not reachable"'
 ```
+
+##### API vs ALB
+Used both because these are separating our Read workloads (browsing the menu) from our Write workloads (placing an order). ALB is optimized for sustained, synchronous container traffic, while API Gateway is the native front door for spiky, asynchronous serverless events. 
+By splitting them, we prevent a massive spike in customer orders from bogging down the Application Load Balancer and slowing down the main website. API Gateway acts as a dedicated, auto-scaling shock absorber for our event-driven backend.
+
