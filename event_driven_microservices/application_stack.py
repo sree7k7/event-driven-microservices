@@ -26,8 +26,8 @@ class application_stack(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, sqs_queue, event_bus, dynamodb_table, vpc, rds_sg, valkey_sg, db_secret, valkey_cluster, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
-        domain_name = "srikanth.help" # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
-        website_sub_domain = f"microservices.{domain_name}" # e.g. microservices.srikanth.help
+        domain_name = config['application']['domain_name'] # <-- REPLACE THIS with your own domain name that you have in Route 53. This is needed for the ACM certificate and CloudFront distribution.
+        website_sub_domain = f"{config['application']['subdomain']}.{domain_name}" # e.g. coffeeshop.srikanth.help
 
         # ===========================================
         # Route 53 Private Hosted Zone for internal service discovery and communication within the VPC
@@ -36,7 +36,7 @@ class application_stack(cdk.Stack):
         hosted_zone = route53.HostedZone.from_lookup(
             self,
             "HostedZone",
-            domain_name="srikanth.help"
+            domain_name=config['application']['domain_name']
         )
 
         ## ACM certificate for the custom domain name
@@ -52,7 +52,7 @@ class application_stack(cdk.Stack):
             "ProcessOrderWorkerLogs",
             log_group_name="/aws/lambda/ProcessOrderWorker",
             removal_policy=RemovalPolicy.DESTROY,
-            retention=logs.RetentionDays.ONE_WEEK,
+            retention=config['application']['log_retention_days'],
         )
 
         ## logging configuration for structured logging for the GenerateReceiptWorker Lambda
@@ -61,7 +61,7 @@ class application_stack(cdk.Stack):
             "GenerateReceiptWorkerLogs",
             log_group_name="/aws/lambda/GenerateReceiptWorker",
             removal_policy=RemovalPolicy.DESTROY,
-            retention=logs.RetentionDays.ONE_WEEK,
+            retention=config['application']['log_retention_days'],
         )
 
         # ==========================================
@@ -144,18 +144,15 @@ class application_stack(cdk.Stack):
         ## Grant the necessary permissions
         sqs_queue.grant_send_messages(self.generate_receipt_fn)
         sqs_queue.grant_consume_messages(self.generate_receipt_fn)
-        # self.generate_receipt_fn.role.add_managed_policy(
-        #     iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
-        # )
 
         # ==========================================
         # API GATEWAY (The VIP Host - HTTP API v2)
         # ==========================================
 
-# Create the HTTP API Gateway, which will serve as the front door for our application, 
-# handling incoming HTTP requests and routing them to the appropriate backend services. 
-# We use HTTP API v2 for its improved performance and lower cost compared to REST API, 
-# making it ideal for our event-driven architecture.
+        # Create the HTTP API Gateway, which will serve as the front door for our application, 
+        # handling incoming HTTP requests and routing them to the appropriate backend services. 
+        # We use HTTP API v2 for its improved performance and lower cost compared to REST API, 
+        # making it ideal for our event-driven architecture.
         self.http_api = apigwv2.HttpApi(
             self,
             "OrderHttpApi",
@@ -192,7 +189,6 @@ class application_stack(cdk.Stack):
             allow_all_outbound=True
         )
         alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(80))
-        # alb_sg.connections.allow_from_any_ipv4(ec2.Port.tcp(443))
 
         # ==========================================
         # ECS (The Workhorse for Heavy Lifting) cluster and task definition

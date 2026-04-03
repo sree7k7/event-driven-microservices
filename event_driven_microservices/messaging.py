@@ -21,7 +21,7 @@ class Messaging(cdk.Stack):
         self.events = events.EventBus(
             self,
             "ReceiptEventBus", 
-            event_bus_name="ReceiptEventBus"
+            event_bus_name=config['messaging']['event_bus_name'],
         )
 
         ## the Quarantine Queue (DLQ)

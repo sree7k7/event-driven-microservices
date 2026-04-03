@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import aws_cdk as cdk
+from aws_cdk import aws_logs as logs
 
 # Import your individual stacks directly
 from event_driven_microservices.network import Network
@@ -19,6 +20,29 @@ microservices_config = {
         "public_subnet_cidrs": ["10.0.1.0/24", "10.0.2.0/24"],
         "private_subnet_cidrs": ["10.0.3.0/24", "10.0.4.0/24"],
     },
+    "messaging": {
+        "event_bus_name": "ReceiptEventBus",
+    },
+    "database": {
+        "dynamodb_table_name": "CoffeeOrders",
+        "rds_instance_type": "t3.micro",
+        "cache_node_type": "cache.t3.micro",
+        "cache_num_nodes": 1
+    },
+    "application": {
+        "domain_name": "srikanth.help", ## chanage based on your actual domain
+        "subdomain": "coffeeshop",
+        "api_name": "CoffeeShopAPI",
+        "lambda_timeout": 30,
+        "lambda_memory": 512,
+        "ecs_cluster_name": "CoffeeShopEcsCluster",
+        "ecs_task_definition_family": "CoffeeShopTaskDefinition",
+        "ecs_task_cpu": 256,
+        "ecs_task_memory": 512, 
+        "alb_name": "CoffeeShopALB",
+        "alb_security_group_name": "AlbSecurityGroup",
+        "log_retention_days": logs.RetentionDays.ONE_DAY,        
+    }
 }
 
 # Define the deployment environment

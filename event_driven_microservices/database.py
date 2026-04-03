@@ -22,7 +22,7 @@ class Database(cdk.Stack):
         self.table = dynamodb.TableV2(
             self,
             "OrdersTable",
-            table_name="CoffeeOrders",
+            table_name=config['database']['dynamodb_table_name'],
             billing=dynamodb.Billing.on_demand(),
             partition_key=dynamodb.Attribute(name="sessionId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY, # NOT recommended for production, use with caution
