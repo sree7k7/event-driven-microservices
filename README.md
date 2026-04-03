@@ -4,7 +4,34 @@ In progress .......
 
 Microservices decoupled architecture with distinct paths, container and serverless pathways.
 
+![github-awscodepipeline](pics/github-awscodecommit.png)
+
+## In this article
+
+- [Purpose](#purpose)
+- [Prerequisites](#prerequisites)
+- [Design](#design)
+
+
+### Prerequisites
+
+- [AWS CDK v2](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)
+- [OICD](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) in AWS
+
+Follow this [guide](https://docs.aws.amazon.com/cdk/v2/guide/cdk_pipeline.html) will help setting up AWS CI/CD in CDK. The below steps are executed based on this doc.
+
+## Adding the identity provider to AWS
+
+- In AWS IAM console, click: Identity provider → Choose: OpenID Connect.
+
+- For the provider URL: Use <https://token.actions.githubusercontent.com>
+- For the "Audience": Use `sts.amazonaws.com`
+
+- After, adding GitHub [OICD](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) provider to IAM. Execute [this](CloudFormation/github-iam.yml) CloudFormation script in Account A. Copy the IAM role from output section.
+
 ### Design
+
+![github-awscodepipeline](pics/github-awscodecommit.png)
 
 ```mermaid
 
@@ -27,7 +54,7 @@ graph TD
 
     %% Phase 1: VPC Foundation
     subgraph "Amazon VPC (Phase 1)"
-        NAT[NAT Gateway]
+        VPCEndpoints[VPC Endpoints / PrivateLink]
         
         subgraph "Private Subnets (The Vault)"
             ECS[Amazon ECS Fargate Containers]
@@ -50,7 +77,7 @@ graph TD
 
     %% Phase 5: Integration
     subgraph "Integration & Decoupling (Phase 5)"
-        SNS((SNS: OrderCreatedTopic))
+        EventBus((EventBridge Bus: ReceiptEventBus))
         SQS[[SQS: ReceiptQueue]]
     end
 
@@ -59,7 +86,7 @@ graph TD
         CW[Amazon CloudWatch]
         XRay[AWS X-Ray]
         ECR[Amazon ECR]
-        CICD[CodePipeline & CodeBuild]
+        GHA[GitHub Actions CI/CD]
     end
 
     %% ---- THE CONNECTIONS & TRAFFIC FLOW ----
@@ -85,13 +112,19 @@ graph TD
     Worker1 -.->|ENI Connection| RDS
 
     %% The Fan-Out Decoupling Flow
-    ECS -->|Broadcasts Event| SNS
-    Worker1 -->|Broadcasts Event| SNS
-    SNS -->|Fan-out| SQS
+    ECS -->|Broadcasts Event| EventBus
+    Worker1 -->|Broadcasts Event| EventBus
+    EventBus -->|Routes Event| SQS
     SQS -->|Triggers| Worker2
 
+    %% VPC Endpoints Flow (Private Access)
+    ECS -.->|Private Traffic| VPCEndpoints
+    VPCEndpoints -.-> ECR
+    VPCEndpoints -.-> CW
+    VPCEndpoints -.-> XRay
+
     %% DevOps & Monitoring (Dotted lines for background processes)
-    CICD -.->|Pushes Docker Image| ECR
+    GHA -.->|Pushes Docker Image| ECR
     ECR -.->|Pulls Image| ECS
     Worker1 -.->|Logs & Traces| CW
     Worker2 -.->|Logs & Traces| CW
@@ -101,7 +134,23 @@ graph TD
     
     %% Placeholder for custom steps
     
-    CICD -.-> CustomSteps
+    GHA -.-> CustomSteps
+```
+
+### Execution
+
+> **Note**: replace the **account-id** in `app.py`, `deploy.yml`
+
+```python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cdk deploy
+
+git add .
+git commit -m "first commit"
+git branch -M main
+git push -u origin main
 ```
 
 
