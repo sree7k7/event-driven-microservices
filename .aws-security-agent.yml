@@ -1,0 +1,7 @@
+# .aws-security-agent.yml
+version: 1.0
+enforcement:
+  - rule: "Require IAM least privilege"
+    description: "Ensure CDK Lambda roles only have access to specific DynamoDB ARNs, not '*'"
+  - rule: "API Gateway Validation"
+    description: "Ensure HTTP API v2 routes require authorization or explicit WAF rate limits"
