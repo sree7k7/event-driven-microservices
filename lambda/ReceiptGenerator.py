@@ -29,7 +29,7 @@ def lambda_handler(event, context):
             
             # 4. Execute the Business Logic
             logger.info("=========================================")
-            logger.info(f"STARTING RECEIPT GENERATION")
+            logger.info("STARTING RECEIPT GENERATION")
             logger.info(f"Target Order ID: {order_id}")
             logger.info(f"Customer Email:  {email}")
             logger.info(f"Purchased Item:  {item}")

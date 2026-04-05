@@ -1,14 +1,9 @@
-import random
-import this
-import aws_cdk
-import constructs
 import aws_cdk as cdk
-from aws_cdk import Duration, RemovalPolicy, Stack
+from aws_cdk import Duration, RemovalPolicy
 from constructs import Construct
 
 import aws_cdk.aws_sqs as sqs
 import aws_cdk.aws_events as events
-import aws_cdk.aws_sns_subscriptions as subscriptions
 import aws_cdk.aws_logs as logs
 import aws_cdk.aws_events_targets as targets
 

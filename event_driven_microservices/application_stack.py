@@ -1,5 +1,5 @@
 import aws_cdk as cdk
-from aws_cdk import RemovalPolicy, Stack
+from aws_cdk import RemovalPolicy
 import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
 from aws_cdk import aws_logs as logs
@@ -15,11 +15,9 @@ import aws_cdk.aws_cloudfront_origins as origins
 import aws_cdk.aws_route53 as route53
 import aws_cdk.aws_route53_targets as route53_targets
 import aws_cdk.aws_ecr as ecr
-import os
 import aws_cdk.aws_certificatemanager as acm
 import aws_cdk.aws_wafv2 as wafv2
 import aws_cdk.aws_iam as iam
-import aws_cdk.aws_dynamodb as dynamodb
 
 ## compute stack is where we define our compute resources, in this case, our lambda functions. We also define the event source for the GenerateReceiptWorker Lambda, which is the SQS Queue created in the Messaging stack. The ProcessOrderWorker Lambda is triggered by API Gateway, which we'll set up in a later step.
 class application_stack(cdk.Stack):
@@ -209,10 +207,6 @@ class application_stack(cdk.Stack):
         self.ecs_task_definition.task_role.add_managed_policy(
             iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
         )
-
-        # Grab the tag from the environment (Pipeline will inject this)
-        # If it's not there, default to "latest" for local testing
-        image_tag = os.environ.get("IMAGE_TAG", "latest")
 
         repo = ecr.Repository.from_repository_name(
             self, 

@@ -1,18 +1,10 @@
-import random
-import this
-import constructs
 import aws_cdk as cdk
-from aws_cdk import Duration, RemovalPolicy, Stack
+from aws_cdk import RemovalPolicy
 import aws_cdk.aws_ec2 as ec2
 from constructs import Construct
-from aws_cdk import aws_logs as logs
-from aws_cdk import aws_ssm as ssm
 import aws_cdk.aws_rds as rds
-import aws_cdk.aws_lambda as lambdaFn
 import aws_cdk.aws_dynamodb as dynamodb
 import aws_cdk.aws_elasticache as elasticache
-from aws_cdk import aws_iam as iam
-
 
 class Database(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, config: object, vpc, **kwargs) -> None:

@@ -1,4 +1,4 @@
-## AWS event driven microservices.
+## AWS event driven microservices
 
 ## In this article
 
@@ -10,7 +10,6 @@
 
 Fully decoupled, event-driven microservices platform on AWS! 🚀☕
 Microservices decoupled architecture with distinct paths, container and serverless pathways.
-
 
 ### Prerequisites
 
@@ -150,7 +149,6 @@ git branch -M main
 git push -u origin main
 ```
 
-
 The Front Door: The user hits Route 53 and CloudFront. The WAF acts as a shield (--- line) protecting the CDN.
 
 The Split: CloudFront is smart. It grabs images from S3, sends web app traffic to the ALB, and sends data requests to the API Gateway.
@@ -160,6 +158,7 @@ The Work: The API Gateway hits your ProcessOrderWorker Lambda. The Lambda saves 
 The Nervous System: The Lambda shouts to the AWS EventBridge Bus, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda safely in the background.
 
 The Security Cameras: Those represent all your resources quietly sending their health data to CloudWatch and X-Ray without slowing down the user experience.
+
 ## docker
 
 ```
@@ -176,7 +175,7 @@ docker tag coffeeshop-app:latest 230150030147.dkr.ecr.us-east-1.amazonaws.com/co
 docker push 230150030147.dkr.ecr.us-east-1.amazonaws.com/coffeeshop-app:latest
 ```
 
-## X-Ray, 
+## X-Ray
 
 ```
 # 1. Create a new private repository for the X-Ray daemon
@@ -224,6 +223,6 @@ bash -c 'echo -n "" > /dev/udp/127.0.0.1/2000 && echo "X-Ray Daemon is actively 
 ```
 
 ##### API vs ALB
-Used both because these are separating our Read workloads (browsing the menu) from our Write workloads (placing an order). ALB is optimized for sustained, synchronous container traffic, while API Gateway is the native front door for spiky, asynchronous serverless events. 
-By splitting them, we prevent a massive spike in customer orders from bogging down the Application Load Balancer and slowing down the main website. API Gateway acts as a dedicated, auto-scaling shock absorber for our event-driven backend.
 
+Used both because these are separating our Read workloads (browsing the menu) from our Write workloads (placing an order). ALB is optimized for sustained, synchronous container traffic, while API Gateway is the native front door for spiky, asynchronous serverless events.
+By splitting them, we prevent a massive spike in customer orders from bogging down the Application Load Balancer and slowing down the main website. API Gateway acts as a dedicated, auto-scaling shock absorber for our event-driven backend.

@@ -8,3 +8,8 @@ dependencies = [
     "aws-cdk-lib>=2.245.0",
     "constructs>=10.6.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
