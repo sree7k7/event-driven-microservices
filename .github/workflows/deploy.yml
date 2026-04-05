@@ -48,6 +48,7 @@ jobs:
   # 3. UNIT TESTS: Run your pytest suite
   test:
     name: Unit Tests
+    needs: [secrets-scan, code-quality] # Wait for all checks to pass
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
