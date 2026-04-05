@@ -149,9 +149,9 @@ git branch -M main
 git push -u origin main
 ```
 
-The Front Door: The user hits Route 53 and CloudFront. The WAF acts as a shield (--- line) protecting the CDN.
+**The Front Door:** The user hits Route 53 and CloudFront. The WAF acts as a shield protecting the CDN.
 
-The Split: CloudFront is smart. It grabs images from S3, sends web app traffic to the ALB, and sends data requests to the API Gateway.
+**The Split:** CloudFront is smart. It grabs images from S3, sends web app traffic to the ALB, and sends data requests to the API Gateway.
 
 The Work: The API Gateway hits your ProcessOrderWorker Lambda. The Lambda saves state to DynamoDB.
 
