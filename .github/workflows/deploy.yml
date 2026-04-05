@@ -40,10 +40,10 @@ jobs:
       
       # Using Ruff because it is incredibly fast and standard for modern Python
       - name: Install Ruff
-        run: pip install ruff
+        run: uv pip install ruff
         
       - name: Run Ruff Linter
-        run: ruff check .
+        run: uv run ruff check .
 
   # 3. UNIT TESTS: Run your pytest suite
   # test:
