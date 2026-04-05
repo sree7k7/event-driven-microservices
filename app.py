@@ -44,7 +44,7 @@ microservices_config = {
         "alb_name": "CoffeeShopALB",
         "alb_security_group_name": "AlbSecurityGroup",
         "ecs_service_security_group_name": "EcsSecurityGroup",
-        "log_retention_days": logs.RetentionDays.ONE_DAY,        
+        "log_retention_days": logs.RetentionDays.ONE_WEEK,        
     }
 }
 
