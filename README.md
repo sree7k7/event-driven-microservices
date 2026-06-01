@@ -16,7 +16,7 @@ Microservices decoupled architecture with distinct paths, container and serverle
 - [AWS CDK v2](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)
 - [OICD](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) in AWS
 
-Follow this [guide](https://docs.aws.amazon.com/cdk/v2/guide/cdk_pipeline.html) will help setting up AWS CI/CD in CDK. The below steps are executed based on this doc.
+Follow this [guide](https://docs.aws.amazon.com/cdk/v2/guide/cdk_pipeline.html) will help setting up AWS CI/CD in CDK. The below steps are executed based on this guide.
 
 ## Adding the identity provider to AWS
 
@@ -135,7 +135,7 @@ graph TD
 
 ### Execution
 
-> **Note**: replace the **account-id** in `app.py`, `deploy.yml`
+**Note**: replace the *account-id* in *app.py*, *deploy.yml*
 
 ```python
 python3 -m venv .venv

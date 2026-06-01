@@ -38,7 +38,7 @@ class application_stack(cdk.Stack):
         )
 
         ## ACM certificate for the custom domain name
-        new_certificate = acm.Certificate(
+        acm_certificate = acm.Certificate(
             self, "Certificate",
             domain_name=website_sub_domain,
             validation=acm.CertificateValidation.from_dns(hosted_zone)
@@ -54,7 +54,7 @@ class application_stack(cdk.Stack):
         )
 
         ## logging configuration for structured logging for the GenerateReceiptWorker Lambda
-        generate_receipt_fn_logs = logs.LogGroup(
+        self.generate_receipt_fn_logs = logs.LogGroup(
             self,
             "GenerateReceiptWorkerLogs",
             log_group_name="/aws/lambda/GenerateReceiptWorker",
@@ -84,12 +84,9 @@ class application_stack(cdk.Stack):
             },
         )
 
-        ## grant the lambda function for xray permissions to write to x-ray. AWSXRayDaemonWriteAccess is an AWS managed policy that includes the necessary permissions for Lambda functions to send trace data to X-Ray, including PutTraceSegments and PutTelemetryRecords. By attaching this managed policy to the Lambda function's execution role, we ensure that it has the required permissions to interact with X-Ray without needing to manually specify each permission.
+        ## grant permissions
         dynamodb_table.grant_read_write_data(self.process_order_fn)
         event_bus.grant_put_events_to(self.process_order_fn)
-        # self.process_order_fn.role.add_managed_policy(
-        #     iam.ManagedPolicy.from_aws_managed_policy_name("AWSXRayDaemonWriteAccess")
-        # )
 
         ## lambda function ReceiptGenerator
         ## The ProcessOrderWorker Lambda shouts to the Event Bus, which drops the message into the SQS Queue, which wakes up the ReceiptGenerator Lambda
@@ -110,7 +107,7 @@ class application_stack(cdk.Stack):
             logging_format=lambdaFn.LoggingFormat.JSON, # Structured logging
             system_log_level_v2=lambdaFn.SystemLogLevel.INFO, # Control Lambda system logs
             application_log_level_v2=lambdaFn.ApplicationLogLevel.INFO, # Control application logs
-            log_group=generate_receipt_fn_logs, # Use the defined log group for structured logging
+            log_group=self.generate_receipt_fn_logs, # Use the defined log group for structured logging
             tracing=lambdaFn.Tracing.ACTIVE, # Enable X-Ray tracing for better observability
             environment={
                 'AWS_XRAY_TRACING_NAME': 'ReceiptGenerator'
@@ -410,7 +407,7 @@ class application_stack(cdk.Stack):
             ),
             price_class=cloudfront.PriceClass.PRICE_CLASS_100, # Use the lowest price class for cost optimization in this demo
             domain_names=[website_sub_domain],
-            certificate=new_certificate,
+            certificate=acm_certificate,
         ## apigw distribution for API Gateway with path pattern matching for /orders path to route to the API Gateway and all other paths to route to the ALB
             additional_behaviors = {
                 "/api/*": cloudfront.BehaviorOptions(
